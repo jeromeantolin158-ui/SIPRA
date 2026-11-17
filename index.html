@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIPRA</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 16px; }
+  button, input, textarea { font: inherit; padding: 8px 12px; }
+  input[type=text], textarea { width: 100%; margin-bottom: 8px; }
+  textarea { height: 320px; font-family: monospace; }
+  ul { padding: 0; }
+  li { list-style: none; cursor: pointer; padding: 10px 0; border-bottom: 1px solid #ddd; }
+  .bar { position: sticky; top: 0; background: #fff; padding: 8px 0; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  #out { white-space: pre-wrap; font-family: monospace; font-size: 18px; line-height: 1.7; padding-bottom: 80vh; }
+  .hidden { display: none; }
+  #out div { line-height: 1.5; }
+  #out .chord { font-weight: 700; margin-top: .6em; }
+</style>
+</head>
+<body>
+
+<!-- LIST VIEW -->
+<div id="listView">
+  <h1>SIPRA</h1>
+  <input type="text" id="searchBox" placeholder="Search title or lyrics..." oninput="renderList()">
+  <button onclick="openEditor()">+ New song</button>
+  <ul id="results"></ul>
+</div>
+
+<!-- SONG VIEW -->
+<div id="songView" class="hidden">
+  <div class="bar">
+    <button onclick="showList()">← Back</button>
+    <button onclick="shift(-1)">-1</button>
+    <span id="keyLabel"></span>
+    <button onclick="shift(1)">+1</button>
+    <button id="modeBtn" onclick="toggleMode()">Chords only</button>
+    <button id="scrollBtn" onclick="toggleScroll()">Start scroll</button>
+    <input type="range" min="10" max="150" value="30" style="width:100px" oninput="setSpeed(this.value)">
+    <button onclick="exportPptx()">PPTX</button>
+    <button onclick="openEditor(current.id)">Edit</button>
+  </div>
+  <h2 id="songTitle"></h2>
+  <div id="out"></div>
+</div>
+
+<!-- EDIT VIEW -->
+<div id="editView" class="hidden">
+  <h2 id="editHeading"></h2>
+  <input type="text" id="fTitle" placeholder="Title">
+  <input type="text" id="fKey" placeholder="Key (e.g. G)">
+  <textarea id="fBody" placeholder="[G]Amazing [C]grace, how [G]sweet the [D]sound"></textarea>
+  <button onclick="saveSong()">Save</button>
+  <button onclick="tidyBox()">Tidy format</button>
+  <button onclick="showList()">Cancel</button>
+  <button id="delBtn" onclick="deleteSong()">Delete</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
