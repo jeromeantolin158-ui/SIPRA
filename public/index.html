@@ -27,6 +27,25 @@
   <input type="text" id="searchBox" placeholder="Search title or lyrics..." oninput="renderList()">
   <button onclick="openEditor()">+ New song</button>
   <button onclick="showView('importView')">Import many</button>
+  <button onclick="toggleBulkDelete()">Select to delete</button>
+
+<button id="deleteSelectedBtn"
+        class="hidden"
+        onclick="deleteSelectedSongs()">
+  Delete selected (0)
+</button>
+
+<button id="selectAllBtn"
+        class="hidden"
+        onclick="selectAllSongs()">
+  Select all
+</button>
+
+<button id="cancelDeleteBtn"
+        class="hidden"
+        onclick="cancelBulkDelete()">
+  Cancel
+</button>
   <button onclick="openSetlist()">Setlist</button>
   <button onclick="exportBackup()">Backup</button>
   <button onclick="document.getElementById('restoreFile').click()">Restore</button>
@@ -68,6 +87,7 @@
   <h2>Import songs</h2>
   <textarea id="importBox" placeholder="Heart of Worship&#10;Intro: D A G A&#10;Verse: D A G A&#10;Refrain: Em G A 4x"></textarea>
   <button onclick="importSongs()">Import</button>
+  <label><input type="checkbox" id="replaceBox"> Replace songs with the same title (overwrites their chords and lyrics)</label><br>
   <button onclick="showList()">Cancel</button>
 </div>
 

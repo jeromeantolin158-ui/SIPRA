@@ -32,6 +32,9 @@ let current = null;
 let steps = 0;
 let chordsMode = false;
 let editingId = null;
+// Bulk delete state
+let bulkDeleteMode = false;
+let selectedSongIds = new Set();
 
 /* ---------- TRANSPOSE ---------- */
 const SHARPS = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
@@ -74,6 +77,7 @@ function showList() {
   renderList();
 }
 
+
 function renderList() {
   const q = $("searchBox").value.trim().toLowerCase();
   const ul = $("results");
@@ -83,16 +87,124 @@ function renderList() {
     .filter(s => (s.title + " " + stripChords(s.body)).toLowerCase().includes(q))
     .sort((a, b) => a.title.localeCompare(b.title));
 
-  if (!found.length) { ul.innerHTML = "<li>No songs found</li>"; return; }
+  updateBulkDeleteControls();
+
+  if (!found.length) {
+    ul.innerHTML = "<li>No songs found</li>";
+    return;
+  }
 
   found.forEach(s => {
     const li = document.createElement("li");
-    li.textContent = s.key ? `${s.title} (${s.key})` : s.title;
-    li.onclick = () => openSong(s.id);
-    li.appendChild(btn(setlist.includes(s.id) ? "✓ In setlist" : "+ Setlist", () => { toggleSet(s.id); renderList(); }));
+
+    li.onclick = () => {
+      if (!bulkDeleteMode) openSong(s.id);
+    };
+
+    if (bulkDeleteMode) {
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = selectedSongIds.has(s.id);
+      checkbox.style.marginRight = "10px";
+
+      checkbox.onclick = e => e.stopPropagation();
+
+      checkbox.onchange = () => {
+        if (checkbox.checked) {
+          selectedSongIds.add(s.id);
+        } else {
+          selectedSongIds.delete(s.id);
+        }
+
+        updateBulkDeleteControls();
+      };
+
+      li.appendChild(checkbox);
+    }
+
+    const title = document.createElement("span");
+    title.textContent = s.key ? `${s.title} (${s.key})` : s.title;
+    li.appendChild(title);
+
+    if (!bulkDeleteMode) {
+      li.appendChild(btn(
+        setlist.includes(s.id) ? "✓ In setlist" : "+ Setlist",
+        () => {
+          toggleSet(s.id);
+          renderList();
+        }
+      ));
+    }
+
     ul.appendChild(li);
   });
 }
+
+
+/* ---------- BULK DELETE ---------- */
+
+function toggleBulkDelete() {
+  bulkDeleteMode = true;
+  selectedSongIds.clear();
+  renderList();
+}
+
+function updateBulkDeleteControls() {
+  $("deleteSelectedBtn").classList.toggle(
+    "hidden", !bulkDeleteMode
+  );
+
+  $("selectAllBtn").classList.toggle(
+    "hidden", !bulkDeleteMode
+  );
+
+  $("cancelDeleteBtn").classList.toggle(
+    "hidden", !bulkDeleteMode
+  );
+
+  $("deleteSelectedBtn").textContent =
+    `Delete selected (${selectedSongIds.size})`;
+}
+
+function selectAllSongs() {
+  selectedSongIds = new Set(songs.map(s => s.id));
+  renderList();
+}
+
+function cancelBulkDelete() {
+  bulkDeleteMode = false;
+  selectedSongIds.clear();
+  renderList();
+}
+
+function deleteSelectedSongs() {
+  if (selectedSongIds.size === 0) {
+    alert("Please select at least one song.");
+    return;
+  }
+
+  const count = selectedSongIds.size;
+
+  if (!confirm(`Are you sure you want to delete ${count} selected song(s)?`)) {
+    return;
+  }
+
+  songs = songs.filter(s => !selectedSongIds.has(s.id));
+
+  // Remove deleted songs from setlist too
+  setlist = setlist.filter(id => !selectedSongIds.has(id));
+
+  persist();
+  saveSetlist();
+
+  bulkDeleteMode = false;
+  selectedSongIds.clear();
+
+  renderList();
+
+  alert(`${count} song(s) deleted successfully.`);
+}
+
 
 /* ---------- SONG VIEW ---------- */
 function openSong(id) {
@@ -401,7 +513,7 @@ function mergeChordLines(text) {
 
 /* ---------- TIDY: labels on their own line + chords above lyrics ---------- */
 
-const NAMES = "pre[- ]?chorus|post[- ]?chorus|chorus|verses?|bridges?|refrain|intro|outro|interlude|instrumental";
+const NAMES = "pre[- ]?chorus|Chorus na may bagsak|last 3|chorus|verses?|bridges?|refrain|intro|outro|interlude|instrumental|medley";
 
 const LABEL_RE = new RegExp(
   "(?:[\\[(]\\s*(?:" + NAMES + ")\\s*\\d*\\s*[\\])]\\s*:?" +
@@ -532,25 +644,51 @@ function foldRepeats(chords) {
   return chords.join(" ");
 }
 
+
+
 const chordsOnly = t => {
-  const sections = [];
-  let cur = { name: "", chords: [] };
-  t.split("\n").forEach(l => {
-    const line = l.trim();
-    if (SECTION_LINE.test(line)) {
-      sections.push(cur);
-      cur = { name: labelText(line).slice(1, -1) + ":", chords: [] };
+  const rows = [];
+  let pendingLabel = "";
+
+  t.split("\n").forEach(line => {
+    const trimmed = line.trim();
+
+    // Remember the section name
+    if (SECTION_LINE.test(trimmed)) {
+      pendingLabel = labelText(trimmed).slice(1, -1) + ": ";
       return;
     }
-    (l.match(/\[([^\]]+)\]/g) || []).forEach(c => cur.chords.push(c.slice(1, -1)));
+
+    // Skip blank lines
+    if (!trimmed) return;
+
+    // Extract chords and repetition markers
+    const chords = [...line.matchAll(/\[([^\]]+)\]/g)]
+      .map(match => match[1]);
+
+    // Ignore lines containing lyrics only
+    if (!chords.length) return;
+
+    let output = chords.join(" ");
+
+    // Put section name before its first chord line
+    if (pendingLabel) {
+      output = pendingLabel + output;
+      pendingLabel = "";
+    }
+
+    rows.push({ t: "chord", s: output });
   });
-  sections.push(cur);
-  return sections
-    .filter(s => s.chords.length)
-        .map(s => ({ t: "chord", s: (s.name ? s.name + " " : "") + foldRepeats(s.chords) }));
+
+  return rows;
 };
 
+
+
 /* ---------- IMPORT MANY SONGS ---------- */
+const isMul = t => /^\(?\d+x\)?$/i.test(t) || /^x\d+$/i.test(t);      // 2x, (2x), x2
+const isChordTok = t => t.split("-").every(c => CHORD.test(c));        // Em, C#m-Bm, G-A-Bm-C
+
 function parseSongs(text) {
   const out = [];
   let cur = null;
@@ -564,27 +702,48 @@ function parseSongs(text) {
     if (km && cur) { cur.key = normKey(km[1]); return; }
 
     const m = line.match(SEC);
-    if (!m) {                                   // not a section line -> it's a new song title
-      cur = { id: "", title: line, key: "", body: [] };
-      out.push(cur);
-      return;
-    }
+    
+    if (!m) {
+      const toks = line.split(/\s+/).filter(Boolean);
+
+      // Recognize chord-only lines, whether indented or not
+      const isChordLine =
+        toks.length > 0 &&
+        toks.every(t => isChordTok(t) || isMul(t));
+
+      if (cur && isChordLine) {
+        cur.body.push(
+          toks.map(t =>
+            isMul(t) ? `[${t.replace(/\D/g, "")}x]` : `[${t}]`
+          ).join(" ")
+        );
+        return;
+      }
+
+  // Indented non-chord continuation
+  if (/^\s+/.test(raw) && cur && cur.body.length) {
+    cur.body.push(line);
+    return;
+  }
+
+  // Otherwise, recognize a new song title
+  cur = { id: "", title: line, key: "", body: [] };
+  out.push(cur);
+  return;
+}
+
     if (!cur) return;
 
     const toks = m[3].split(/\s+/).filter(Boolean);
-    let times = 1;
-    const last = toks[toks.length - 1] || "";
-    const mt = last.match(/^\(?(\d+)x\)?$/i) || last.match(/^x(\d+)$/i);   // 4x, (2x), x4
-    if (mt) { times = Math.min(+mt[1], 16); toks.pop(); }
-
     const label = m[1].toUpperCase()
       .replace(/^(VERSE|BRIDGE)S$/, "$1")
       .replace(/^PRE[- ]?CHORUS$/, "PRE-CHORUS") + (m[2] ? " " + m[2] : "") + ":";
     cur.body.push(label);
 
-    if (toks.length && toks.every(t => CHORD.test(t))) {
-      cur.body.push([].concat(...Array(times).fill(toks)).map(c => `[${c}]`).join(" "));
-      if (!cur.key) cur.key = normKey(toks[0].split("/")[0]);          // key = first chord of the song
+    if (toks.length && toks.every(t => isChordTok(t) || isMul(t))) {
+      cur.body.push(toks.map(t => isMul(t) ? `[${t.replace(/\D/g, "")}x]` : `[${t}]`).join(" "));
+      const first = toks.find(isChordTok);
+      if (!cur.key && first) cur.key = normKey(first.split(/[\/-]/)[0]);
     } else {
       cur.body.push(toks.join(" "));
     }
@@ -595,21 +754,30 @@ function parseSongs(text) {
 
 function importSongs() {
   const found = parseSongs($("importBox").value);
-  const have = new Set(songs.map(s => s.title.toLowerCase()));
-  let added = 0;
+  const replace = $("replaceBox").checked;
+  const byTitle = new Map(songs.map(s => [s.title.toLowerCase(), s]));
+  let added = 0, updated = 0, skipped = 0;
 
   found.forEach(s => {
-    if (!s.body.length || have.has(s.title.toLowerCase())) return;   // skip duplicates
+    if (!s.body.length) { skipped++; return; }
+    const body = s.body.join("\n").trim();
+    const old = byTitle.get(s.title.toLowerCase());
+
+    if (old) {
+      if (replace) { old.body = body; old.key = s.key || old.key; updated++; }
+      else skipped++;
+      return;
+    }
     s.id = Date.now().toString() + added;
-    s.body = s.body.join("\n").trim();
+    s.body = body;
     songs.push(s);
-    have.add(s.title.toLowerCase());
+    byTitle.set(s.title.toLowerCase(), s);
     added++;
   });
 
   persist();
   $("importBox").value = "";
-  alert(`Added ${added} song(s), skipped ${found.length - added}`);
+  alert(`Added ${added}, updated ${updated}, skipped ${skipped}`);
   showList();
 }
 /* ---------- SETLIST ---------- */
