@@ -401,7 +401,7 @@ function mergeChordLines(text) {
 
 /* ---------- TIDY: labels on their own line + chords above lyrics ---------- */
 
-const NAMES = "pre[- ]?chorus|post[- ]?chorus|chorus|verses?|bridges?|refrain|intro|outro|interlude|instrumental";
+const NAMES = "pre[- ]?chorus|chorus|verses?|bridges?|refrain|intro|outro|interlude|instrumental|medley";
 
 const LABEL_RE = new RegExp(
   "(?:[\\[(]\\s*(?:" + NAMES + ")\\s*\\d*\\s*[\\])]\\s*:?" +
@@ -551,6 +551,9 @@ const chordsOnly = t => {
 };
 
 /* ---------- IMPORT MANY SONGS ---------- */
+const isMul = t => /^\(?\d+x\)?$/i.test(t) || /^x\d+$/i.test(t);      // 2x, (2x), x2
+const isChordTok = t => t.split("-").every(c => CHORD.test(c));        // Em, C#m-Bm, G-A-Bm-C
+
 function parseSongs(text) {
   const out = [];
   let cur = null;
@@ -564,7 +567,7 @@ function parseSongs(text) {
     if (km && cur) { cur.key = normKey(km[1]); return; }
 
     const m = line.match(SEC);
-    if (!m) {                                   // not a section line -> it's a new song title
+    if (!m) {                                   // not a section line -> new song title
       cur = { id: "", title: line, key: "", body: [] };
       out.push(cur);
       return;
@@ -572,19 +575,15 @@ function parseSongs(text) {
     if (!cur) return;
 
     const toks = m[3].split(/\s+/).filter(Boolean);
-    let times = 1;
-    const last = toks[toks.length - 1] || "";
-    const mt = last.match(/^\(?(\d+)x\)?$/i) || last.match(/^x(\d+)$/i);   // 4x, (2x), x4
-    if (mt) { times = Math.min(+mt[1], 16); toks.pop(); }
-
     const label = m[1].toUpperCase()
       .replace(/^(VERSE|BRIDGE)S$/, "$1")
       .replace(/^PRE[- ]?CHORUS$/, "PRE-CHORUS") + (m[2] ? " " + m[2] : "") + ":";
     cur.body.push(label);
 
-    if (toks.length && toks.every(t => CHORD.test(t))) {
-      cur.body.push([].concat(...Array(times).fill(toks)).map(c => `[${c}]`).join(" "));
-      if (!cur.key) cur.key = normKey(toks[0].split("/")[0]);          // key = first chord of the song
+    if (toks.length && toks.every(t => isChordTok(t) || isMul(t))) {
+      cur.body.push(toks.map(t => isMul(t) ? `[${t.replace(/\D/g, "")}x]` : `[${t}]`).join(" "));
+      const first = toks.find(isChordTok);
+      if (!cur.key && first) cur.key = normKey(first.split(/[\/-]/)[0]);
     } else {
       cur.body.push(toks.join(" "));
     }
@@ -595,21 +594,30 @@ function parseSongs(text) {
 
 function importSongs() {
   const found = parseSongs($("importBox").value);
-  const have = new Set(songs.map(s => s.title.toLowerCase()));
-  let added = 0;
+  const replace = $("replaceBox").checked;
+  const byTitle = new Map(songs.map(s => [s.title.toLowerCase(), s]));
+  let added = 0, updated = 0, skipped = 0;
 
   found.forEach(s => {
-    if (!s.body.length || have.has(s.title.toLowerCase())) return;   // skip duplicates
+    if (!s.body.length) { skipped++; return; }
+    const body = s.body.join("\n").trim();
+    const old = byTitle.get(s.title.toLowerCase());
+
+    if (old) {
+      if (replace) { old.body = body; old.key = s.key || old.key; updated++; }
+      else skipped++;
+      return;
+    }
     s.id = Date.now().toString() + added;
-    s.body = s.body.join("\n").trim();
+    s.body = body;
     songs.push(s);
-    have.add(s.title.toLowerCase());
+    byTitle.set(s.title.toLowerCase(), s);
     added++;
   });
 
   persist();
   $("importBox").value = "";
-  alert(`Added ${added} song(s), skipped ${found.length - added}`);
+  alert(`Added ${added}, updated ${updated}, skipped ${skipped}`);
   showList();
 }
 /* ---------- SETLIST ---------- */
