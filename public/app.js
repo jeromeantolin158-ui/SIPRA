@@ -513,7 +513,7 @@ function mergeChordLines(text) {
 
 /* ---------- TIDY: labels on their own line + chords above lyrics ---------- */
 
-const NAMES = "pre[- ]?chorus|Chorus na may bagsak|last 3|chorus|verses?|bridges?|refrain|intro|outro|interlude|instrumental|medley";
+const NAMES = "pre[- ]?chorus|post[- ]?chorus|chorus|verses?|bridges?|refrain|intro|outro|interlude|instrumental";
 
 const LABEL_RE = new RegExp(
   "(?:[\\[(]\\s*(?:" + NAMES + ")\\s*\\d*\\s*[\\])]\\s*:?" +
@@ -702,36 +702,11 @@ function parseSongs(text) {
     if (km && cur) { cur.key = normKey(km[1]); return; }
 
     const m = line.match(SEC);
-    
-    if (!m) {
-      const toks = line.split(/\s+/).filter(Boolean);
-
-      // Recognize chord-only lines, whether indented or not
-      const isChordLine =
-        toks.length > 0 &&
-        toks.every(t => isChordTok(t) || isMul(t));
-
-      if (cur && isChordLine) {
-        cur.body.push(
-          toks.map(t =>
-            isMul(t) ? `[${t.replace(/\D/g, "")}x]` : `[${t}]`
-          ).join(" ")
-        );
-        return;
-      }
-
-  // Indented non-chord continuation
-  if (/^\s+/.test(raw) && cur && cur.body.length) {
-    cur.body.push(line);
-    return;
-  }
-
-  // Otherwise, recognize a new song title
-  cur = { id: "", title: line, key: "", body: [] };
-  out.push(cur);
-  return;
-}
-
+    if (!m) {                                   // not a section line -> it's a new song title
+      cur = { id: "", title: line, key: "", body: [] };
+      out.push(cur);
+      return;
+    }
     if (!cur) return;
 
     const toks = m[3].split(/\s+/).filter(Boolean);
