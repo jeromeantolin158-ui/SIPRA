@@ -26,6 +26,11 @@
   <h1>SIPRA</h1>
   <input type="text" id="searchBox" placeholder="Search title or lyrics..." oninput="renderList()">
   <button onclick="openEditor()">+ New song</button>
+  <button onclick="showView('importView')">Import many</button>
+  <button onclick="openSetlist()">Setlist</button>
+  <button onclick="exportBackup()">Backup</button>
+  <button onclick="document.getElementById('restoreFile').click()">Restore</button>
+  <input type="file" id="restoreFile" accept=".json" class="hidden" onchange="restoreBackup(this)">
   <ul id="results"></ul>
 </div>
 
@@ -58,7 +63,24 @@
   <button id="delBtn" onclick="deleteSong()">Delete</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js"></script>
+<!-- IMPORT VIEW -->
+<div id="importView" class="hidden">
+  <h2>Import songs</h2>
+  <textarea id="importBox" placeholder="Heart of Worship&#10;Intro: D A G A&#10;Verse: D A G A&#10;Refrain: Em G A 4x"></textarea>
+  <button onclick="importSongs()">Import</button>
+  <button onclick="showList()">Cancel</button>
+</div>
+
+<!-- SETLIST VIEW -->
+<div id="setView" class="hidden">
+  <h2>Setlist</h2>
+  <button onclick="showList()">← Back</button>
+  <button onclick="exportSetlistPptx()">Export PPTX</button>
+  <button onclick="clearSetlist()">Clear</button>
+  <ul id="setItems"></ul>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

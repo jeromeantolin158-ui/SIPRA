@@ -15,6 +15,18 @@ try {
 
 const persist = () => localStorage.setItem("sipra_songs", JSON.stringify(songs));
 
+let setlist;
+try { setlist = JSON.parse(localStorage.getItem("sipra_setlist")) || []; } catch (e) { setlist = []; }
+const saveSetlist = () => localStorage.setItem("sipra_setlist", JSON.stringify(setlist));
+
+const btn = (text, fn) => {
+  const b = document.createElement("button");
+  b.textContent = text;
+  b.style.float = "right";
+  b.onclick = e => { e.stopPropagation(); fn(); };
+  return b;
+};
+
 /* ---------- STATE ---------- */
 let current = null;
 let steps = 0;
@@ -49,7 +61,7 @@ function flatsFor(key, n) {
 const stripChords = t => t.replace(/\[[^\]]*\]/g, "");
 
 function showView(name) {
-  ["listView", "songView", "editView"].forEach(v =>
+  ["listView", "songView", "editView", "importView", "setView"].forEach(v =>
     $(v).classList.toggle("hidden", v !== name)
   );
   window.scrollTo(0, 0);
@@ -71,15 +83,13 @@ function renderList() {
     .filter(s => (s.title + " " + stripChords(s.body)).toLowerCase().includes(q))
     .sort((a, b) => a.title.localeCompare(b.title));
 
-  if (!found.length) {
-    ul.innerHTML = "<li>No songs found</li>";
-    return;
-  }
+  if (!found.length) { ul.innerHTML = "<li>No songs found</li>"; return; }
 
   found.forEach(s => {
     const li = document.createElement("li");
     li.textContent = s.key ? `${s.title} (${s.key})` : s.title;
     li.onclick = () => openSong(s.id);
+    li.appendChild(btn(setlist.includes(s.id) ? "✓ In setlist" : "+ Setlist", () => { toggleSet(s.id); renderList(); }));
     ul.appendChild(li);
   });
 }
@@ -95,10 +105,11 @@ function openSong(id) {
 }
 
 function render() {
-  const t = transposeSong(current.body, steps, flatsFor(current.key, steps));
+  const k = normKey(current.key);
+  const t = transposeSong(current.body, steps, flatsFor(k, steps));
   $("songTitle").textContent = current.title;
   paint(chordsMode ? chordsOnly(t) : chordsAbove(t));
-  $("keyLabel").textContent = "Key: " + (current.key ? transposeChord(current.key, steps, flatsFor(current.key, steps)) : "-");
+  $("keyLabel").textContent = "Key: " + (k ? transposeChord(k, steps, flatsFor(k, steps)) : "-");
   $("modeBtn").textContent = chordsMode ? "Full song" : "Chords only";
 }
 
@@ -151,17 +162,18 @@ function tick(time) {
 
 function startScroll() {
   if (scrolling) return;
-
   scrolling = true;
   pos = window.scrollY;
   lastTime = 0;
   $("scrollBtn").textContent = "Stop scroll";
+  keepAwake(true);
   requestAnimationFrame(tick);
 }
 
 function stopScroll() {
   scrolling = false;
   $("scrollBtn").textContent = "Start scroll";
+  keepAwake(false);
 }
 
 function toggleScroll() {
@@ -171,6 +183,20 @@ function toggleScroll() {
 function setSpeed(v) {
   speed = Number(v);
 }
+
+/* ---------- KEEP SCREEN AWAKE WHILE SCROLLING ---------- */
+let wakeLock = null;
+
+async function keepAwake(on) {
+  try {
+    if (on && "wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen");
+    else if (wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch (e) {}
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && scrolling) keepAwake(true);
+});
 
 /* ---------- ADD / EDIT / DELETE ---------- */
 function openEditor(id) {
@@ -204,7 +230,7 @@ function saveSong() {
   }
 
   s.title = title;
-  s.key = $("fKey").value.trim();
+  s.key = normKey($("fKey").value);
   s.body = $("fBody").value;
 
   persist();
@@ -220,35 +246,48 @@ function deleteSong() {
 }
 
 /* ---------- LYRICS TO PPTX (4 lines max per slide) ---------- */
-function exportPptx() {
-  const pptx = new PptxGenJS();
-  pptx.layout = "LAYOUT_16x9";
+function newPptx() {
+  const p = new PptxGenJS();
+  p.layout = "LAYOUT_16x9";
+  return p;
+}
 
+function addSongSlides(pptx, song) {
   const cover = pptx.addSlide();
   cover.background = { color: "000000" };
+  cover.addText(song.title, { x: 0.5, y: 0.5, w: 9, h: 4.5, fontSize: 44, bold: true, color: "FFFFFF", align: "center", valign: "middle" });
 
-  cover.addText(current.title, {
-    x: 0.5, y: 0.5, w: 9, h: 4.5,
-    fontSize: 44, bold: true, color: "FFFFFF",
-    align: "center", valign: "middle"
-  });
-
-  stripChords(current.body).split(/\n\s*\n/).forEach(block => {
+  stripChords(song.body).split(/\n\s*\n/).forEach(block => {
     const lines = block.split("\n").map(l => l.trim()).filter(l => l && !SECTION_LINE.test(l));
-
     for (let i = 0; i < lines.length; i += 4) {
       const slide = pptx.addSlide();
       slide.background = { color: "000000" };
-
-      slide.addText(lines.slice(i, i + 4).join("\n"), {
-        x: 0.5, y: 0.5, w: 9, h: 4.5,
-        fontSize: 36, color: "FFFFFF",
-        align: "center", valign: "middle", fit: "shrink"
-      });
+      slide.addText(lines.slice(i, i + 4).join("\n"), { x: 0.5, y: 0.5, w: 9, h: 4.5, fontSize: 36, color: "FFFFFF", align: "center", valign: "middle", fit: "shrink" });
     }
   });
+}
 
-  pptx.writeFile({ fileName: current.title + ".pptx" });
+async function exportPptx() {
+  try {
+    if (typeof PptxGenJS === "undefined") throw new Error("PPTX library not loaded. Check your internet or turn Brave Shields down.");
+    const p = newPptx();
+    addSongSlides(p, current);
+    await p.writeFile({ fileName: current.title + ".pptx" });
+  } catch (e) {
+    alert("PPTX failed: " + e.message);
+  }
+}
+
+async function exportSetlistPptx() {
+  if (!setlist.length) { alert("Setlist is empty"); return; }
+  try {
+    if (typeof PptxGenJS === "undefined") throw new Error("PPTX library not loaded. Check your internet or turn Brave Shields down.");
+    const p = newPptx();
+    setlist.forEach(id => { const s = songs.find(x => x.id === id); if (s) addSongSlides(p, s); });
+    await p.writeFile({ fileName: "Setlist.pptx" });
+  } catch (e) {
+    alert("PPTX failed: " + e.message);
+  }
 }
 
 /* ---------- START ---------- */
@@ -259,9 +298,18 @@ const CHORD = /^[A-G][#b]?(?:maj|min|dim|aug|sus|add|m|M)?\d*(?:(?:sus|add|maj|b
 
 function markChords(text) {
   const tokens = text.match(/\S+/g);
+  if (!tokens) return text;
 
-  if (!tokens || !tokens.every(t => CHORD.test(t))) return text;
+  const last = tokens[tokens.length - 1];
+  const mt = tokens.length > 1 && (last.match(/^\(?(\d+)x\)?$/i) || last.match(/^x(\d+)$/i));   // 4x, (2x), x4
+  if (mt) tokens.pop();
 
+  if (!tokens.every(t => CHORD.test(t))) return text;
+
+  if (mt) {                                   // repeat the chords, drop the "4x"
+    const times = Math.min(+mt[1], 16);
+    return [].concat(...Array(times).fill(tokens)).map(c => `[${c}]`).join(" ");
+  }
   return text.replace(/\S+/g, t => `[${t}]`);
 }
 
@@ -383,6 +431,11 @@ function tidy(text) {
     .trim();
 }
 
+function normKey(k) {                       // "a" -> "A", "bbm" -> "Bbm"
+  k = (k || "").trim();
+  return k ? k[0].toUpperCase() + k.slice(1) : "";
+}
+
 function tidyBox() {
   $("fBody").value = tidy($("fBody").value);
 }
@@ -496,3 +549,151 @@ const chordsOnly = t => {
     .filter(s => s.chords.length)
         .map(s => ({ t: "chord", s: (s.name ? s.name + " " : "") + foldRepeats(s.chords) }));
 };
+
+/* ---------- IMPORT MANY SONGS ---------- */
+function parseSongs(text) {
+  const out = [];
+  let cur = null;
+  const SEC = new RegExp("^(" + NAMES + ")\\s*(\\d*)\\s*:\\s*(.*)$", "i");
+
+  text.replace(/\r\n?/g, "\n").split("\n").forEach(raw => {
+    const line = raw.trim();
+    if (!line) return;
+
+    const km = line.match(/^key(?:\s+of)?\s*[:\-]?\s*([A-Ga-g][#b]?m?)$/i);
+    if (km && cur) { cur.key = normKey(km[1]); return; }
+
+    const m = line.match(SEC);
+    if (!m) {                                   // not a section line -> it's a new song title
+      cur = { id: "", title: line, key: "", body: [] };
+      out.push(cur);
+      return;
+    }
+    if (!cur) return;
+
+    const toks = m[3].split(/\s+/).filter(Boolean);
+    let times = 1;
+    const last = toks[toks.length - 1] || "";
+    const mt = last.match(/^\(?(\d+)x\)?$/i) || last.match(/^x(\d+)$/i);   // 4x, (2x), x4
+    if (mt) { times = Math.min(+mt[1], 16); toks.pop(); }
+
+    const label = m[1].toUpperCase()
+      .replace(/^(VERSE|BRIDGE)S$/, "$1")
+      .replace(/^PRE[- ]?CHORUS$/, "PRE-CHORUS") + (m[2] ? " " + m[2] : "") + ":";
+    cur.body.push(label);
+
+    if (toks.length && toks.every(t => CHORD.test(t))) {
+      cur.body.push([].concat(...Array(times).fill(toks)).map(c => `[${c}]`).join(" "));
+      if (!cur.key) cur.key = normKey(toks[0].split("/")[0]);          // key = first chord of the song
+    } else {
+      cur.body.push(toks.join(" "));
+    }
+    cur.body.push("");
+  });
+  return out;
+}
+
+function importSongs() {
+  const found = parseSongs($("importBox").value);
+  const have = new Set(songs.map(s => s.title.toLowerCase()));
+  let added = 0;
+
+  found.forEach(s => {
+    if (!s.body.length || have.has(s.title.toLowerCase())) return;   // skip duplicates
+    s.id = Date.now().toString() + added;
+    s.body = s.body.join("\n").trim();
+    songs.push(s);
+    have.add(s.title.toLowerCase());
+    added++;
+  });
+
+  persist();
+  $("importBox").value = "";
+  alert(`Added ${added} song(s), skipped ${found.length - added}`);
+  showList();
+}
+/* ---------- SETLIST ---------- */
+function toggleSet(id) {
+  const i = setlist.indexOf(id);
+  i === -1 ? setlist.push(id) : setlist.splice(i, 1);
+  saveSetlist();
+}
+
+function openSetlist() {
+  setlist = setlist.filter(id => songs.some(s => s.id === id));   // drop deleted songs
+  saveSetlist();
+  showView("setView");
+  renderSetlist();
+}
+
+function renderSetlist() {
+  const ul = $("setItems");
+  ul.innerHTML = "";
+  if (!setlist.length) { ul.innerHTML = '<li>Empty. Use "+ Setlist" on a song in the list.</li>'; return; }
+
+  setlist.forEach((id, i) => {
+    const s = songs.find(x => x.id === id);
+    const li = document.createElement("li");
+    li.textContent = `${i + 1}. ${s.title}${s.key ? " (" + s.key + ")" : ""}`;
+    li.onclick = () => openSong(id);
+    li.appendChild(btn("✕", () => { setlist.splice(i, 1); saveSetlist(); renderSetlist(); }));
+    li.appendChild(btn("↓", () => moveSet(i, 1)));
+    li.appendChild(btn("↑", () => moveSet(i, -1)));
+    ul.appendChild(li);
+  });
+}
+
+function moveSet(i, d) {
+  const j = i + d;
+  if (j < 0 || j >= setlist.length) return;
+  [setlist[i], setlist[j]] = [setlist[j], setlist[i]];
+  saveSetlist();
+  renderSetlist();
+}
+
+function clearSetlist() {
+  if (!confirm("Clear the setlist?")) return;
+  setlist = [];
+  saveSetlist();
+  renderSetlist();
+}
+
+/* ---------- BACKUP / RESTORE ---------- */
+function exportBackup() {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ songs, setlist }, null, 1)], { type: "application/json" }));
+  a.download = "sipra-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function restoreBackup(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      const incoming = Array.isArray(d) ? d : d.songs;
+      if (!Array.isArray(incoming)) throw new Error("bad file");
+
+      const ids = new Set(songs.map(s => s.id));
+      let added = 0;
+      incoming.forEach(s => {
+        if (s && s.id && s.title && !ids.has(s.id)) { songs.push(s); ids.add(s.id); added++; }
+      });
+      persist();
+
+      if (Array.isArray(d.setlist)) {
+        d.setlist.forEach(id => { if (ids.has(id) && !setlist.includes(id)) setlist.push(id); });
+        saveSetlist();
+      }
+      alert(`Restored ${added} song(s)`);
+      showList();
+    } catch (e) {
+      alert("That file is not a SIPRA backup");
+    }
+    input.value = "";
+  };
+  r.readAsText(file);
+}
