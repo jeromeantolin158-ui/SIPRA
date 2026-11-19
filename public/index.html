@@ -17,6 +17,7 @@
   .hidden { display: none; }
   #out div { line-height: 1.5; }
   #out .chord { font-weight: 700; margin-top: .6em; }
+  #out .cline { margin-top: .6em; }
 </style>
 </head>
 <body>
@@ -27,7 +28,9 @@
   <input type="text" id="searchBox" placeholder="Search title or lyrics..." oninput="renderList()">
   <button onclick="openEditor()">+ New song</button>
   <button onclick="showView('importView')">Import many</button>
+  <button id="undoBtn" class="hidden" onclick="undoImport()">↶ Undo import</button>
   <button onclick="toggleBulkDelete()">Select to delete</button>
+  
 
 <button id="deleteSelectedBtn"
         class="hidden"

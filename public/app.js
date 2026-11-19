@@ -27,6 +27,12 @@ const btn = (text, fn) => {
   return b;
 };
 
+let lastImport = null;
+try { lastImport = JSON.parse(localStorage.getItem("sipra_undo")); } catch (e) {}
+const saveUndo = () => {
+  try { lastImport ? localStorage.setItem("sipra_undo", JSON.stringify(lastImport)) : localStorage.removeItem("sipra_undo"); } catch (e) {}
+};
+
 /* ---------- STATE ---------- */
 let current = null;
 let steps = 0;
@@ -53,7 +59,7 @@ function transposeChord(chord, n, useFlats = false) {
 }
 
 function transposeSong(text, n, useFlats = false) {
-  return text.replace(/\[([^\]]+)\]/g, (_, c) => `[${transposeChord(c, n, useFlats)}]`);
+  return text.replace(/\[([^\]]+)\]/g, (m, c) => c[0] === '"' ? m : `[${transposeChord(c, n, useFlats)}]`);
 }
 
 function flatsFor(key, n) {
@@ -75,8 +81,8 @@ function showList() {
   stopScroll();
   showView("listView");
   renderList();
+  $("undoBtn").classList.toggle("hidden", !lastImport);
 }
-
 
 function renderList() {
   const q = $("searchBox").value.trim().toLowerCase();
@@ -236,7 +242,16 @@ function paint(rows) {
   rows.forEach(r => {
     const d = document.createElement("div");
     d.className = r.t;
-    d.textContent = r.s || "\u00a0";
+
+    if (r.label) {
+      const b = document.createElement("b");
+      b.textContent = r.label;
+      d.appendChild(b);
+      d.appendChild(document.createTextNode(" " + r.s));
+    } else {
+      d.textContent = r.s || "\u00a0";
+      if (r.indent) d.style.paddingLeft = r.indent + "ch";
+    }
     box.appendChild(d);
   });
 }
@@ -411,18 +426,12 @@ const CHORD = /^[A-G][#b]?(?:maj|min|dim|aug|sus|add|m|M)?\d*(?:(?:sus|add|maj|b
 function markChords(text) {
   const tokens = text.match(/\S+/g);
   if (!tokens) return text;
+  if (!tokens.some(isChordTok) || !tokens.every(t => isChordTok(t) || isMul(t))) return text;
 
-  const last = tokens[tokens.length - 1];
-  const mt = tokens.length > 1 && (last.match(/^\(?(\d+)x\)?$/i) || last.match(/^x(\d+)$/i));   // 4x, (2x), x4
-  if (mt) tokens.pop();
-
-  if (!tokens.every(t => CHORD.test(t))) return text;
-
-  if (mt) {                                   // repeat the chords, drop the "4x"
-    const times = Math.min(+mt[1], 16);
-    return [].concat(...Array(times).fill(tokens)).map(c => `[${c}]`).join(" ");
+  if (tokens.some(isMul)) {                     // keep repeats as [4x], also in the middle of a line
+    return tokens.map(t => isMul(t) ? `[${t.replace(/\D/g, "")}x]` : `[${t}]`).join(" ");
   }
-  return text.replace(/\S+/g, t => `[${t}]`);
+  return text.replace(/\S+/g, t => `[${t}]`);   // keeps spacing so chords stay above the right words
 }
 
 function htmlToChordText(root) {
@@ -513,7 +522,8 @@ function mergeChordLines(text) {
 
 /* ---------- TIDY: labels on their own line + chords above lyrics ---------- */
 
-const NAMES = "pre[- ]?chorus|post[- ]?chorus|chorus|verses?|bridges?|refrain|intro|outro|interlude|instrumental";
+const NAMES = "pre[- ]?chorus|post[- ]?chorus|chorus|verses?|bridges?|medley|refrain|intro|outro|interlude|instrumental";
+const NAMES_ALL = NAMES + "|last";
 
 const LABEL_RE = new RegExp(
   "(?:[\\[(]\\s*(?:" + NAMES + ")\\s*\\d*\\s*[\\])]\\s*:?" +
@@ -522,7 +532,7 @@ const LABEL_RE = new RegExp(
   "gim"
 );
 
-const SECTION_LINE = new RegExp("^(?:" + NAMES + ")(?:\\s*\\d+)?:?$", "i");
+const SECTION_LINE = new RegExp("^(?:" + NAMES_ALL + ")(?:\\s*\\d+)?:?$", "i");
 
 function tidy(text) {
   text = text.replace(/\r\n?/g, "\n").replace(/\u00a0/g, " ").replace(LABEL_RE, m => {
@@ -649,35 +659,27 @@ function foldRepeats(chords) {
 const chordsOnly = t => {
   const rows = [];
   let pendingLabel = "";
+  let indent = 0;
 
   t.split("\n").forEach(line => {
     const trimmed = line.trim();
 
-    // Remember the section name
     if (SECTION_LINE.test(trimmed)) {
-      pendingLabel = labelText(trimmed).slice(1, -1) + ": ";
+      pendingLabel = labelText(trimmed).slice(1, -1) + ":";
+      indent = pendingLabel.length + 1;
       return;
     }
-
-    // Skip blank lines
     if (!trimmed) return;
 
-    // Extract chords and repetition markers
-    const chords = [...line.matchAll(/\[([^\]]+)\]/g)]
-      .map(match => match[1]);
-
-    // Ignore lines containing lyrics only
+    const chords = [...line.matchAll(/\[([^\]]+)\]/g)].map(m => m[1]);
     if (!chords.length) return;
 
-    let output = chords.join(" ");
-
-    // Put section name before its first chord line
     if (pendingLabel) {
-      output = pendingLabel + output;
+      rows.push({ t: "cline", label: pendingLabel, s: chords.join(" ") });
       pendingLabel = "";
+    } else {
+      rows.push({ t: "ccont", s: chords.join(" "), indent });
     }
-
-    rows.push({ t: "chord", s: output });
   });
 
   return rows;
@@ -688,41 +690,61 @@ const chordsOnly = t => {
 /* ---------- IMPORT MANY SONGS ---------- */
 const isMul = t => /^\(?\d+x\)?$/i.test(t) || /^x\d+$/i.test(t);      // 2x, (2x), x2
 const isChordTok = t => t.split("-").every(c => CHORD.test(c));        // Em, C#m-Bm, G-A-Bm-C
+const isNote = t => /^["“].*["”]$/.test(t);                              // "any reminder"
+const isDash = t => /^[-–—]$/.test(t);                                   // a lone - between chords
+const isTok = t => isChordTok(t) || isMul(t) || isNote(t) || isDash(t);
+const tokenize = s => s.match(/["“][^"”]*["”]|\S+/g) || [];
+const fmtTok = t => isDash(t) ? "[-]"
+                  : isNote(t) ? `["${t.slice(1, -1).replace(/[\[\]]/g, "").trim()}"]`
+                  : isMul(t) ? `[${t.replace(/\D/g, "")}x]` : `[${t}]`;
 
 function parseSongs(text) {
   const out = [];
   let cur = null;
-  const SEC = new RegExp("^(" + NAMES + ")\\s*(\\d*)\\s*:\\s*(.*)$", "i");
+  let gap = false;                               // was there a blank line since the last section?
+  const SEC = new RegExp("^(" + NAMES_ALL + ")\\s*(\\d*)\\s*:\\s*(.*)$", "i");
+  const SPLIT = new RegExp("[ \\t]*\\b(?:" + NAMES_ALL + ")[ \\t]*\\d*[ \\t]*:", "gi");
 
-  text.replace(/\r\n?/g, "\n").split("\n").forEach(raw => {
+  text.replace(/\r\n?/g, "\n").replace(SPLIT, "\n$&").split("\n").forEach(raw => {
     const line = raw.trim();
-    if (!line) return;
+    if (!line) { gap = true; return; }
 
     const km = line.match(/^key(?:\s+of)?\s*[:\-]?\s*([A-Ga-g][#b]?m?)$/i);
     if (km && cur) { cur.key = normKey(km[1]); return; }
 
     const m = line.match(SEC);
-    if (!m) {                                   // not a section line -> it's a new song title
-      cur = { id: "", title: line, key: "", body: [] };
+
+    if (!m) {
+      const t = tokenize(line);
+      const onlyChords = t.every(isTok) && t.some(isChordTok);
+
+      if (cur && !gap && cur.body.length && onlyChords) {      // chords on a new line, same section
+        if (cur.body[cur.body.length - 1] === "") cur.body.pop();
+        cur.body.push(t.map(fmtTok).join(" "), "");
+        return;
+      }
+      cur = { id: "", title: line, key: "", body: [] };         // otherwise: a new song title
       out.push(cur);
+      gap = false;
       return;
     }
     if (!cur) return;
 
-    const toks = m[3].split(/\s+/).filter(Boolean);
+    const toks = tokenize(m[3]);
     const label = m[1].toUpperCase()
       .replace(/^(VERSE|BRIDGE)S$/, "$1")
       .replace(/^PRE[- ]?CHORUS$/, "PRE-CHORUS") + (m[2] ? " " + m[2] : "") + ":";
     cur.body.push(label);
 
-    if (toks.length && toks.every(t => isChordTok(t) || isMul(t))) {
-      cur.body.push(toks.map(t => isMul(t) ? `[${t.replace(/\D/g, "")}x]` : `[${t}]`).join(" "));
+    if (toks.length && toks.every(isTok)) {
+      cur.body.push(toks.map(fmtTok).join(" "));
       const first = toks.find(isChordTok);
       if (!cur.key && first) cur.key = normKey(first.split(/[\/-]/)[0]);
-    } else {
+    } else if (toks.length) {
       cur.body.push(toks.join(" "));
     }
     cur.body.push("");
+    gap = false;
   });
   return out;
 }
@@ -731,6 +753,7 @@ function importSongs() {
   const found = parseSongs($("importBox").value);
   const replace = $("replaceBox").checked;
   const byTitle = new Map(songs.map(s => [s.title.toLowerCase(), s]));
+  const undo = { added: [], updated: [] };
   let added = 0, updated = 0, skipped = 0;
 
   found.forEach(s => {
@@ -739,22 +762,47 @@ function importSongs() {
     const old = byTitle.get(s.title.toLowerCase());
 
     if (old) {
-      if (replace) { old.body = body; old.key = s.key || old.key; updated++; }
-      else skipped++;
+      if (replace) {
+        undo.updated.push({ id: old.id, body: old.body, key: old.key });   // remember the old version
+        old.body = body;
+        old.key = s.key || old.key;
+        updated++;
+      } else skipped++;
       return;
     }
     s.id = Date.now().toString() + added;
     s.body = body;
     songs.push(s);
     byTitle.set(s.title.toLowerCase(), s);
+    undo.added.push(s.id);
     added++;
   });
 
+  if (added || updated) { lastImport = undo; saveUndo(); }
   persist();
   $("importBox").value = "";
   alert(`Added ${added}, updated ${updated}, skipped ${skipped}`);
   showList();
 }
+
+function undoImport() {
+  if (!lastImport) return;
+  if (!confirm(`Undo the last import? ${lastImport.added.length} added song(s) will be removed and ${lastImport.updated.length} replaced song(s) restored.`)) return;
+
+  songs = songs.filter(s => !lastImport.added.includes(s.id));
+  [...lastImport.updated].reverse().forEach(u => {
+    const s = songs.find(x => x.id === u.id);
+    if (s) { s.body = u.body; s.key = u.key; }
+  });
+  setlist = setlist.filter(id => songs.some(s => s.id === id));
+
+  lastImport = null;
+  persist();
+  saveSetlist();
+  saveUndo();
+  showList();
+}
+
 /* ---------- SETLIST ---------- */
 function toggleSet(id) {
   const i = setlist.indexOf(id);
