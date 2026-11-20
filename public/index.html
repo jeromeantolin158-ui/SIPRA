@@ -19,6 +19,7 @@
     <nav class="links" aria-label="Main">
       <a href="#/home" data-go="home" id="navHome">Home</a>
       <a href="#/about" data-go="about" id="navAbout">About us</a>
+      <a href="#/songs" data-go="songs" id="navSongs">Songs</a>
     </nav>
     <label class="search">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -120,12 +121,22 @@
         <span id="keyLabel" class="key-label"></span>
         <button class="pill pill-ghost pill-sq" onclick="shift(1)" aria-label="Transpose up">+1</button>
       </div>
+      <div class="group">
+        <button class="pill pill-ghost pill-sq" onclick="changeCapo(-1)" aria-label="Capo down">-</button>
+        <span id="capoLabel" class="key-label">Capo 0</span>
+        <button class="pill pill-ghost pill-sq" onclick="changeCapo(1)" aria-label="Capo up">+</button>
+      </div>
+      <div class="group">
+        <button class="pill pill-ghost pill-sq" onclick="changeFs(-2)" aria-label="Smaller text">A-</button>
+        <button class="pill pill-ghost pill-sq" onclick="changeFs(2)" aria-label="Bigger text">A+</button>
+      </div>
       <button class="pill pill-ghost" id="modeBtn" onclick="toggleMode()">Chords only</button>
       <div class="group">
         <button class="pill pill-ghost" id="scrollBtn" onclick="toggleScroll()">Start scroll</button>
         <input type="range" min="10" max="150" value="30" oninput="setSpeed(this.value)" aria-label="Scroll speed">
       </div>
       <button class="pill pill-ghost" onclick="exportPptx()">PPTX</button>
+      <button class="pill pill-ghost" onclick="window.print()">Print / PDF</button>
       <button class="pill pill-ghost" id="setBtn" onclick="toggleCurrentSet()">+ Setlist</button>
     </div>
   </div>
@@ -140,6 +151,9 @@
   <div class="wrap narrow">
     <p class="eyebrow">Your service plan</p>
     <h1 class="display page-title">Setlist</h1>
+    <label class="field-label" for="setName">Service name</label>
+    <input class="field" type="text" id="setName" placeholder="e.g. Sunday 9am" maxlength="60" oninput="saveSetName(this.value)">
+    <p class="muted hint">Drag a song by its handle to reorder (or use the arrows on phones).</p>
     <div class="row-actions">
       <button class="pill pill-ghost" data-go="songs">&larr; Back</button>
       <button class="pill pill-amber" onclick="exportSetlistPptx()">Export PPTX</button>

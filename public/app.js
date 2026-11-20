@@ -34,6 +34,9 @@ const saveUndo = () => {
 /* ---------- STATE ---------- */
 let current = null;
 let steps = 0;
+let capo = 0;
+let fs = Number(load("chordify_fs", 0)) || 0;      // song text size in px (0 = default)
+let setName = load("chordify_setname", "");
 let chordsMode = false;
 let editingId = null;
 let delIds = new Set();
@@ -332,15 +335,27 @@ function paint(rows) {
 
 function render() {
   const k = normKey(current.key);
-  const t = transposeSong(current.body, steps, flatsFor(k, steps));
+  const n = steps - capo;                           // capo: show the shapes you play, not the sounding chords
+  const t = transposeSong(current.body, n, flatsFor(k, n));
   $("songTitle").textContent = current.title;
+  $("out").style.fontSize = fs ? fs + "px" : "";
   paint(chordsMode ? chordsOnly(t) : chordsAbove(t));
-  $("keyLabel").textContent = "Key: " + (k ? transposeChord(k, steps, flatsFor(k, steps)) : "-");
+  const sounding = k ? transposeChord(k, steps, flatsFor(k, steps)) : "-";
+  const shapes = k ? transposeChord(k, n, flatsFor(k, n)) : "";
+  $("keyLabel").textContent = "Key: " + sounding + (capo && k ? " (play " + shapes + ")" : "");
+  $("capoLabel").textContent = "Capo " + capo;
   $("modeBtn").textContent = chordsMode ? "Full song" : "Chords only";
   $("setBtn").textContent = setlist.includes(current.id) ? "✓ In setlist" : "+ Setlist";
 }
 
 function shift(n) { steps += n; render(); }
+function changeCapo(d) { capo = Math.min(11, Math.max(0, capo + d)); render(); }
+function changeFs(d) {
+  if (!fs) fs = parseFloat(getComputedStyle($("out")).fontSize) || 18;
+  fs = Math.min(44, Math.max(12, fs + d));
+  save("chordify_fs", fs);
+  render();
+}
 function toggleMode() { chordsMode = !chordsMode; render(); }
 
 function toggleCurrentSet() {
@@ -513,6 +528,7 @@ function renderSongs() {
 function openSong(s) {
   current = s;
   steps = 0;
+  capo = 0;
   chordsMode = false;
   recent = [s.id, ...recent.filter(id => id !== s.id)].slice(0, 6);
   saveRecent();
@@ -527,10 +543,14 @@ function toggleSet(id) {
   saveSetlist();
 }
 
+let dragFrom = null;
+function saveSetName(v) { setName = v; save("chordify_setname", v); }
+
 function renderSetlist() {
   setlist = setlist.filter(id => songs.some(s => s.id === id));   // drop deleted songs
   saveSetlist();
 
+  $("setName").value = setName;
   const ul = $("setItems");
   ul.innerHTML = "";
   if (!setlist.length) {
@@ -542,6 +562,26 @@ function renderSetlist() {
   setlist.forEach((id, i) => {
     const s = songs.find(x => x.id === id);
     const li = el("li", "clickable");
+    li.draggable = true;
+    li.addEventListener("dragstart", e => {
+      dragFrom = i;
+      li.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", String(i));
+    });
+    li.addEventListener("dragend", () => { li.classList.remove("dragging"); dragFrom = null; });
+    li.addEventListener("dragover", e => { e.preventDefault(); li.classList.add("over"); });
+    li.addEventListener("dragleave", () => li.classList.remove("over"));
+    li.addEventListener("drop", e => {
+      e.preventDefault();
+      if (dragFrom === null || dragFrom === i) return;
+      const [m] = setlist.splice(dragFrom, 1);
+      setlist.splice(i, 0, m);
+      dragFrom = null;
+      saveSetlist();
+      renderSetlist();
+    });
+    li.appendChild(el("span", "grip", "⋮⋮"));
     li.appendChild(el("span", "idx", String(i + 1).padStart(2, "0")));
     const g = el("span", "grow", s.title);
     li.appendChild(g);
@@ -872,8 +912,14 @@ async function exportSetlistPptx() {
   try {
     if (typeof PptxGenJS === "undefined") throw new Error("PPTX library not loaded. Check your internet or turn Brave Shields down.");
     const p = newPptx();
+    const name = setName.trim();
+    if (name) {
+      const cover = p.addSlide();
+      cover.background = { color: "000000" };
+      cover.addText(name, { x: 0.5, y: 0.5, w: 9, h: 4.5, fontSize: 48, bold: true, color: "FFFFFF", align: "center", valign: "middle", fit: "shrink" });
+    }
     setlist.forEach(id => { const s = songs.find(x => x.id === id); if (s) addSongSlides(p, s); });
-    await p.writeFile({ fileName: "Setlist.pptx" });
+    await p.writeFile({ fileName: (name.replace(/[\\/:*?"<>|]/g, "") || "Setlist") + ".pptx" });
   } catch (e) {
     toast("PPTX failed: " + e.message);
   }
@@ -913,6 +959,7 @@ function setNav(a) {
     $("navAbout").setAttribute("aria-current", "false");
   }
   $("navManage").setAttribute("aria-current", MANAGE_GROUP.includes(a) ? "page" : "false");
+  $("navSongs").setAttribute("aria-current", ["songs", "song", "setlist"].includes(a) ? "page" : "false");
 }
 const VIEWS_ROUTES = ["songs", "song", "setlist", "manage", "edit", "import", "delete"];
 
@@ -967,6 +1014,7 @@ function spy() {
   const onAbout = $("about").getBoundingClientRect().top < window.innerHeight * 0.45;
   $("navHome").setAttribute("aria-current", onAbout ? "false" : "page");
   $("navAbout").setAttribute("aria-current", onAbout ? "page" : "false");
+  $("navSongs").setAttribute("aria-current", "false");
 }
 window.addEventListener("scroll", () => {
   if (spyQueued) return;

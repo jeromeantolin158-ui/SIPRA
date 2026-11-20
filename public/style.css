@@ -324,6 +324,11 @@ ul { padding: 0; list-style: none; }
 .check-row { display: flex; align-items: center; gap: 12px; width: 100%; cursor: pointer; }
 input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--amber); flex: none; }
 
+.list li .grip { color: var(--muted); cursor: grab; letter-spacing: -2px; user-select: none; }
+.list li.dragging { opacity: .4; }
+.list li.over { box-shadow: 0 2px 0 var(--amber); }
+.hint { font-size: .82rem; margin: 10px 0 0; }
+
 /* ---------- Forms ---------- */
 .field-label { display: block; font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 18px 0 6px; }
 .field {
@@ -426,6 +431,19 @@ dialog .row-actions { margin-bottom: 0; justify-content: flex-end; }
   #out { font-size: 15px; }
   .toolbar-in { gap: 8px; }
   .footer-in { flex-direction: column; }
+}
+
+/* ---------- Print / Save as PDF (song view) ---------- */
+@media print {
+  .nav, .toolbar, .footer, #toast, dialog { display: none !important; }
+  html, body { background: #fff !important; color: #000 !important; }
+  body { padding: 0 !important; }
+  .song-title { color: #000 !important; margin: 0 0 14px; font-size: 26pt; }
+  #out { padding-bottom: 0 !important; color: #000 !important; }
+  #out .chord, #out .cline, #out .ccont { color: #000 !important; font-weight: 700; }
+  #out .cline b, #out .label { color: #000 !important; }
+  #out .label { font-weight: 700; }
+  #out div { break-inside: avoid; }
 }
 
 @media (prefers-reduced-motion: reduce) {
