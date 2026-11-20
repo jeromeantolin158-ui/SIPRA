@@ -985,6 +985,26 @@ $("fBody").addEventListener("paste", e => {
   e.target.setRangeText(text, e.target.selectionStart, e.target.selectionEnd, "end");
 });
 
+/* ---------- HOME DEMO CARD ---------- */
+const DEMO_LINES = [
+  [["G","Amazing"],["C","grace,"],["G","how"],["G","sweet"],["D","the"],["G","sound"]],
+  [["G","that"],["C","saved"],["G","a"],["Em","wretch"],["D","like"],["G","me"]]
+];
+let demoShift = 0;
+function renderDemo() {
+  const body = document.getElementById("demoBody");
+  if (!body) return;
+  const flats = flatsFor("G", demoShift);
+  body.innerHTML = DEMO_LINES.map(line =>
+    line.map(([c, w]) => `<span class="seg"><i>${transposeChord(c, demoShift, flats)}</i>${w}</span>`).join("")
+  ).join('<div style="flex-basis:100%;height:0"></div>');
+  document.getElementById("demoKey").textContent = transposeChord("G", demoShift, flats);
+}
+function demoMove(n) { demoShift = ((demoShift + n) % 12 + 12) % 12; renderDemo(); }
+document.getElementById("demoUp").addEventListener("click", () => demoMove(1));
+document.getElementById("demoDown").addEventListener("click", () => demoMove(-1));
+renderDemo();
+
 /* ---------- START ---------- */
 syncThemeBtn();
 route();

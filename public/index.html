@@ -36,10 +36,26 @@
 
   <section id="home" class="hero">
     <div class="wrap">
-      <p class="eyebrow">A home for every song</p>
-      <h1 class="display hero-title">Your chords,<br><span class="accent">in any key.</span></h1>
-      <p class="lead">Find your song. Make it your own.<br>Everything you need for your next session.</p>
-      <a class="pill pill-amber pill-lg" href="#/songs" data-go="songs">See all songs &rarr;</a>
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">A home for every song</p>
+          <h1 class="display hero-title">Your chords,<br><span class="accent">in any key.</span></h1>
+          <p class="lead">Find your song. Make it your own.<br>Everything you need for your next session.</p>
+          <a class="pill pill-amber pill-lg" href="#/songs" data-go="songs">See all songs &rarr;</a>
+        </div>
+        <aside class="demo" aria-label="Live transpose demo">
+          <div class="demo-top">
+            <span class="demo-name">Amazing Grace</span>
+            <span class="demo-key">Key <b id="demoKey">G</b></span>
+          </div>
+          <div class="demo-body" id="demoBody"></div>
+          <div class="demo-ctrl">
+            <button class="pill pill-ghost pill-sq" id="demoDown" aria-label="Transpose down">-1</button>
+            <span class="demo-hint">Try it: change the key</span>
+            <button class="pill pill-amber pill-sq" id="demoUp" aria-label="Transpose up">+1</button>
+          </div>
+        </aside>
+      </div>
 
       <div class="panel">
         <h2 class="display panel-title">On repeat.</h2>
@@ -76,7 +92,6 @@
       </div>
 
       <p class="display closing">One place. Every rehearsal. Every stage.</p>
-      <a class="pill pill-amber pill-lg" href="#/songs" data-go="songs">Explore the songbook &rarr;</a>
     </div>
   </section>
 
