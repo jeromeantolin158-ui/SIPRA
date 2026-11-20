@@ -1,107 +1,226 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SIPRA</title>
-<style>
-  * { box-sizing: border-box; }
-  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 16px; }
-  button, input, textarea { font: inherit; padding: 8px 12px; }
-  input[type=text], textarea { width: 100%; margin-bottom: 8px; }
-  textarea { height: 320px; font-family: monospace; }
-  ul { padding: 0; }
-  li { list-style: none; cursor: pointer; padding: 10px 0; border-bottom: 1px solid #ddd; }
-  .bar { position: sticky; top: 0; background: #fff; padding: 8px 0; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-  #out { white-space: pre-wrap; font-family: monospace; font-size: 18px; line-height: 1.7; padding-bottom: 80vh; }
-  .hidden { display: none; }
-  #out div { line-height: 1.5; }
-  #out .chord { font-weight: 700; margin-top: .6em; }
-  #out .cline { margin-top: .6em; }
-</style>
+<title>CHORDIFY</title>
+<script>try{var t=localStorage.getItem("sipra_theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=JetBrains+Mono:wght@400;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- LIST VIEW -->
-<div id="listView">
-  <h1>SIPRA</h1>
-  <input type="text" id="searchBox" placeholder="Search title or lyrics..." oninput="renderList()">
-  <button onclick="openEditor()">+ New song</button>
-  <button onclick="showView('importView')">Import many</button>
-  <button id="undoBtn" class="hidden" onclick="undoImport()">↶ Undo import</button>
-  <button onclick="toggleBulkDelete()">Select to delete</button>
-  
+<!-- NAVIGATION (on every page) -->
+<header class="nav" id="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="#/home" data-go="home">CHORDIFY</a>
+    <nav class="links" aria-label="Main">
+      <a href="#/home" data-go="home" id="navHome">Home</a>
+      <a href="#/about" data-go="about" id="navAbout">About us</a>
+    </nav>
+    <label class="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="text" id="searchBox" placeholder="Search songs..." autocomplete="off" aria-label="Search songs">
+    </label>
+    <a class="pill pill-dark nav-manage" href="#/manage" data-go="manage" id="navManage">Manage</a>
+    <button class="pill pill-light" id="themeBtn" onclick="toggleTheme()">Light</button>
+  </div>
+</header>
 
-<button id="deleteSelectedBtn"
-        class="hidden"
-        onclick="deleteSelectedSongs()">
-  Delete selected (0)
-</button>
+<main>
 
-<button id="selectAllBtn"
-        class="hidden"
-        onclick="selectAllSongs()">
-  Select all
-</button>
+<!-- HOME + ABOUT (one page) -->
+<div id="homeView">
 
-<button id="cancelDeleteBtn"
-        class="hidden"
-        onclick="cancelBulkDelete()">
-  Cancel
-</button>
-  <button onclick="openSetlist()">Setlist</button>
-  <button onclick="exportBackup()">Backup</button>
-  <button onclick="document.getElementById('restoreFile').click()">Restore</button>
-  <input type="file" id="restoreFile" accept=".json" class="hidden" onchange="restoreBackup(this)">
-  <ul id="results"></ul>
+  <section id="home" class="hero">
+    <div class="wrap">
+      <p class="eyebrow">A home for every song</p>
+      <h1 class="display hero-title">Your chords,<br><span class="accent">in any key.</span></h1>
+      <p class="lead">Find your song. Make it your own.<br>Everything you need for your next session.</p>
+      <a class="pill pill-amber pill-lg" href="#/songs" data-go="songs">See all songs &rarr;</a>
+
+      <div class="panel">
+        <h2 class="display panel-title">On repeat.</h2>
+        <div class="grid grid-3" id="repeatGrid"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="about" class="about">
+    <div class="wrap">
+      <p class="eyebrow">Built around your music</p>
+      <h2 class="display about-title">Simplify Music.<br>Organize Every Song.</h2>
+      <p class="lead">From the first chord to the final chorus, CHORDIFY keeps your songs, keys and setlists in harmony. Less time preparing. More time playing.</p>
+
+      <div class="grid grid-3 features">
+        <article class="feature">
+          <span class="idx">01</span>
+          <p class="glyph">D &rarr; E</p>
+          <h3 class="display">Find your key.</h3>
+          <p>Transpose every chord in a tap. Find the range that feels right for your voice.</p>
+        </article>
+        <article class="feature">
+          <span class="idx">02</span>
+          <p class="glyph">&darr; 1&times;</p>
+          <h3 class="display">Stay in the flow.</h3>
+          <p>Let auto-scroll follow your pace. Keep your hands on your instrument, not your screen.</p>
+        </article>
+        <article class="feature">
+          <span class="idx">03</span>
+          <p class="glyph">Aa &rarr; PPTX</p>
+          <h3 class="display">Share every word.</h3>
+          <p>Turn lyrics into a PowerPoint presentation, ready for the room to sing along.</p>
+        </article>
+      </div>
+
+      <p class="display closing">One place. Every rehearsal. Every stage.</p>
+      <a class="pill pill-amber pill-lg" href="#/songs" data-go="songs">Explore the songbook &rarr;</a>
+    </div>
+  </section>
+
 </div>
+
+<!-- SONGS (read-only: browse and make a setlist) -->
+<section id="songsView" class="page hidden">
+  <div class="wrap">
+    <p class="eyebrow">The songbook</p>
+    <div class="page-head">
+      <h1 class="display page-title">All songs</h1>
+      <button class="pill pill-amber" data-go="setlist">My setlist (<span id="setCount">0</span>)</button>
+    </div>
+    <p class="muted" id="songsInfo"></p>
+    <div class="grid grid-auto" id="songGrid"></div>
+  </div>
+</section>
 
 <!-- SONG VIEW -->
-<div id="songView" class="hidden">
-  <div class="bar">
-    <button onclick="showList()">← Back</button>
-    <button onclick="shift(-1)">-1</button>
-    <span id="keyLabel"></span>
-    <button onclick="shift(1)">+1</button>
-    <button id="modeBtn" onclick="toggleMode()">Chords only</button>
-    <button id="scrollBtn" onclick="toggleScroll()">Start scroll</button>
-    <input type="range" min="10" max="150" value="30" style="width:100px" oninput="setSpeed(this.value)">
-    <button onclick="exportPptx()">PPTX</button>
-    <button onclick="openEditor(current.id)">Edit</button>
+<section id="songView" class="page hidden">
+  <div class="toolbar">
+    <div class="wrap toolbar-in">
+      <button class="pill pill-ghost" data-go="songs">&larr; Back</button>
+      <div class="group">
+        <button class="pill pill-ghost pill-sq" onclick="shift(-1)" aria-label="Transpose down">-1</button>
+        <span id="keyLabel" class="key-label"></span>
+        <button class="pill pill-ghost pill-sq" onclick="shift(1)" aria-label="Transpose up">+1</button>
+      </div>
+      <button class="pill pill-ghost" id="modeBtn" onclick="toggleMode()">Chords only</button>
+      <div class="group">
+        <button class="pill pill-ghost" id="scrollBtn" onclick="toggleScroll()">Start scroll</button>
+        <input type="range" min="10" max="150" value="30" oninput="setSpeed(this.value)" aria-label="Scroll speed">
+      </div>
+      <button class="pill pill-ghost" onclick="exportPptx()">PPTX</button>
+      <button class="pill pill-ghost" id="setBtn" onclick="toggleCurrentSet()">+ Setlist</button>
+    </div>
   </div>
-  <h2 id="songTitle"></h2>
-  <div id="out"></div>
-</div>
+  <div class="wrap">
+    <h1 class="display song-title" id="songTitle"></h1>
+    <div id="out"></div>
+  </div>
+</section>
 
-<!-- EDIT VIEW -->
-<div id="editView" class="hidden">
-  <h2 id="editHeading"></h2>
-  <input type="text" id="fTitle" placeholder="Title">
-  <input type="text" id="fKey" placeholder="Key (e.g. G)">
-  <textarea id="fBody" placeholder="[G]Amazing [C]grace, how [G]sweet the [D]sound"></textarea>
-  <button onclick="saveSong()">Save</button>
-  <button onclick="tidyBox()">Tidy format</button>
-  <button onclick="showList()">Cancel</button>
-  <button id="delBtn" onclick="deleteSong()">Delete</button>
-</div>
+<!-- SETLIST -->
+<section id="setView" class="page hidden">
+  <div class="wrap narrow">
+    <p class="eyebrow">Your service plan</p>
+    <h1 class="display page-title">Setlist</h1>
+    <div class="row-actions">
+      <button class="pill pill-ghost" data-go="songs">&larr; Back</button>
+      <button class="pill pill-amber" onclick="exportSetlistPptx()">Export PPTX</button>
+      <button class="pill pill-ghost" onclick="clearSetlist()">Clear</button>
+    </div>
+    <ul class="list" id="setItems"></ul>
+  </div>
+</section>
 
-<!-- IMPORT VIEW -->
-<div id="importView" class="hidden">
-  <h2>Import songs</h2>
-  <textarea id="importBox" placeholder="Heart of Worship&#10;Intro: D A G A&#10;Verse: D A G A&#10;Refrain: Em G A 4x"></textarea>
-  <button onclick="importSongs()">Import</button>
-  <label><input type="checkbox" id="replaceBox"> Replace songs with the same title (overwrites their chords and lyrics)</label><br>
-  <button onclick="showList()">Cancel</button>
-</div>
+<!-- MANAGE -->
+<section id="manageView" class="page hidden">
+  <div class="wrap">
+    <p class="eyebrow">Your library</p>
+    <h1 class="display page-title">Manage library</h1>
+    <div class="grid grid-auto actions">
+      <button class="action" data-go="edit"><span class="idx">01</span><strong>Add song</strong><small>Type or paste one song</small></button>
+      <button class="action" data-go="import"><span class="idx">02</span><strong>Add multiple songs</strong><small>Paste many songs at once</small></button>
+      <button class="action" id="undoBtn" onclick="undoImport()"><span class="idx">03</span><strong>Undo last import</strong><small id="undoNote">Nothing to undo</small></button>
+      <button class="action" data-go="delete"><span class="idx">04</span><strong>Select songs to delete</strong><small>Remove several at once</small></button>
+      <button class="action" onclick="exportBackup()"><span class="idx">05</span><strong>Back up library</strong><small>Download a copy of all songs</small></button>
+      <button class="action" onclick="document.getElementById('restoreFile').click()"><span class="idx">06</span><strong>Restore from backup</strong><small>Add songs from a backup file</small></button>
+    </div>
+    <input type="file" id="restoreFile" accept=".json" class="hidden" onchange="restoreBackup(this)">
 
-<!-- SETLIST VIEW -->
-<div id="setView" class="hidden">
-  <h2>Setlist</h2>
-  <button onclick="showList()">← Back</button>
-  <button onclick="exportSetlistPptx()">Export PPTX</button>
-  <button onclick="clearSetlist()">Clear</button>
-  <ul id="setItems"></ul>
-</div>
+    <h2 class="display section-title">Your songs</h2>
+    <ul class="list" id="manageList"></ul>
+  </div>
+</section>
+
+<!-- ADD / EDIT SONG -->
+<section id="editView" class="page hidden">
+  <div class="wrap narrow">
+    <p class="eyebrow">Manage</p>
+    <h1 class="display page-title" id="editHeading"></h1>
+    <label class="field-label" for="fTitle">Title</label>
+    <input class="field" type="text" id="fTitle" placeholder="Title">
+    <label class="field-label" for="fKey">Key</label>
+    <input class="field" type="text" id="fKey" placeholder="Key (e.g. G)">
+    <label class="field-label" for="fBody">Chords and lyrics</label>
+    <textarea class="field mono" id="fBody" placeholder="[G]Amazing [C]grace, how [G]sweet the [D]sound"></textarea>
+    <div class="row-actions">
+      <button class="pill pill-amber" onclick="saveSong()">Save</button>
+      <button class="pill pill-ghost" onclick="tidyBox()">Tidy format</button>
+      <button class="pill pill-ghost" data-go="manage">Cancel</button>
+      <button class="pill pill-danger" id="delBtn" onclick="deleteSong()">Delete</button>
+    </div>
+  </div>
+</section>
+
+<!-- ADD MULTIPLE SONGS -->
+<section id="importView" class="page hidden">
+  <div class="wrap narrow">
+    <p class="eyebrow">Manage</p>
+    <h1 class="display page-title">Add multiple songs</h1>
+    <p class="muted">One song after another. A title line, then one line per section, like the example below.</p>
+    <textarea class="field mono" id="importBox" placeholder="Heart of Worship&#10;Intro: D A G A&#10;Verse: D A G A&#10;Refrain: Em G A 4x&#10;&#10;Another Song&#10;Intro: F C D F&#10;Chorus: C G Am F 2x"></textarea>
+    <label class="check"><input type="checkbox" id="replaceBox"> Replace songs with the same title (overwrites their chords and lyrics)</label>
+    <div class="row-actions">
+      <button class="pill pill-amber" onclick="importSongs()">Import</button>
+      <button class="pill pill-ghost" data-go="manage">Cancel</button>
+    </div>
+  </div>
+</section>
+
+<!-- SELECT TO DELETE -->
+<section id="deleteView" class="page hidden">
+  <div class="wrap narrow">
+    <p class="eyebrow">Manage</p>
+    <h1 class="display page-title">Select songs to delete</h1>
+    <div class="row-actions">
+      <button class="pill pill-danger" id="deleteSelectedBtn" onclick="deleteSelectedSongs()">Delete selected (0)</button>
+      <button class="pill pill-ghost" onclick="selectAllSongs()">Select all</button>
+      <button class="pill pill-ghost" data-go="manage">Cancel</button>
+    </div>
+    <ul class="list" id="deleteList"></ul>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-in">
+    <span>CHORDIFY&nbsp; / &nbsp;Less setup. More music.</span>
+    <span>Made for the way you play.</span>
+  </div>
+</footer>
+
+<!-- confirm dialog + toast -->
+<dialog id="dlg">
+  <p id="dlgMsg"></p>
+  <div class="row-actions">
+    <button class="pill pill-ghost" id="dlgNo">Cancel</button>
+    <button class="pill pill-amber" id="dlgOk">Confirm</button>
+  </div>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script src="app.js"></script>
