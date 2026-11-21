@@ -117,12 +117,11 @@ const stripChords = t => t.replace(/\[[^\]]*\]/g, "");
 function markChords(text) {
   const tokens = text.match(/\S+/g);
   if (!tokens) return text;
-  if (!tokens.some(isChordTok) || !tokens.every(t => isChordTok(t) || isMul(t))) return text;
+  if (!tokens.some(isChordTok) || !tokens.every(t => isChordTok(t) || isMul(t) || isDash(t))) return text;
 
-  if (tokens.some(isMul)) {                     // keep repeats as [4x], also in the middle of a line
-    return tokens.map(t => isMul(t) ? `[${t.replace(/\D/g, "")}x]` : `[${t}]`).join(" ");
-  }
-  return text.replace(/\S+/g, t => `[${t}]`);   // keeps spacing so chords stay above the right words
+  const one = t => isDash(t) ? "[-]" : isMul(t) ? `[${t.replace(/\D/g, "")}x]` : `[${t}]`;
+  if (tokens.some(isMul)) return tokens.map(one).join(" ");   // keep repeats as [4x], also in the middle of a line
+  return text.replace(/\S+/g, one);             // keeps spacing so chords stay above the right words
 }
 
 function htmlToChordText(root) {

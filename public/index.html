@@ -1,575 +1,345 @@
-/* =========================================================
-   CHORDIFY styles
-   Layout idea: one warm brown-to-black page, big serif
-   headlines, amber accents, monospace chords.
-   ========================================================= */
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CHORDIFY</title>
+<script>try{var t=localStorage.getItem("sipra_theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6c4818">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-/* ---------- Fonts (saved inside the site, so they also work offline) ---------- */
-@font-face { font-family: "Fraunces"; font-style: normal; font-weight: 600 900; font-display: swap; src: url("fonts/fraunces-latin-opsz-normal.woff2") format("woff2"); }
-@font-face { font-family: "Outfit"; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/outfit-latin-400-normal.woff2") format("woff2"); }
-@font-face { font-family: "Outfit"; font-style: normal; font-weight: 500; font-display: swap; src: url("fonts/outfit-latin-500-normal.woff2") format("woff2"); }
-@font-face { font-family: "Outfit"; font-style: normal; font-weight: 600; font-display: swap; src: url("fonts/outfit-latin-600-normal.woff2") format("woff2"); }
-@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2"); }
-@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 700; font-display: swap; src: url("fonts/jetbrains-mono-latin-700-normal.woff2") format("woff2"); }
+<!-- NAVIGATION (on every page) -->
+<header class="nav" id="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="#/home" data-go="home">CHORDIFY</a>
+    <nav class="links" aria-label="Main">
+      <a href="#/home" data-go="home" id="navHome">Home</a>
+      <a href="#/about" data-go="about" id="navAbout">About us</a>
+      <a href="#/songs" data-go="songs" id="navSongs">Songs</a>
+    </nav>
+    <label class="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="text" id="searchBox" placeholder="Search songs..." autocomplete="off" aria-label="Search songs">
+    </label>
+    <a class="pill pill-dark nav-manage" href="#/manage" data-go="manage" id="navManage">Manage</a>
+    <button class="pill pill-light" id="themeBtn" onclick="toggleTheme()">Light</button>
+  </div>
+</header>
 
-/* ---------- Design tokens ---------- */
-:root {
-  --bg: #0b0805;
-  --glow: #6c4818;
-  --glow-soft: rgba(108, 72, 24, .5);
-  --panel: #5a3c05;
-  --card: #241808;
-  --amber: #ffb43e;
-  --amber-ink: #1b1204;
-  --accent: #ffb43e;
-  --text: #f6efe3;
-  --muted: #d8cbb2;
-  --faint: rgba(246, 239, 227, .16);
-  --field: #e8e1d3;
-  --field-ink: #2b1d08;
-  --chip: #4b3208;
-  --chord: #ffb43e;
-  --danger: #e0674a;
+<main>
 
-  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
-  --font-ui: "Outfit", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+<!-- HOME + ABOUT (one page) -->
+<div id="homeView">
 
-  --gutter: clamp(16px, 4vw, 40px);
-  --nav-h: 72px;
-  --radius: 18px;
-  color-scheme: dark;
-}
+  <section id="home" class="hero">
+    <div class="wrap">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">A home for every song</p>
+          <h1 class="display hero-title">Your chords,<br><span class="accent">in any key.</span></h1>
+          <p class="lead">Find your song. Make it your own.<br>Everything you need for your next session.</p>
+          <a class="pill pill-amber pill-lg" href="#/songs" data-go="songs">See all songs &rarr;</a>
+        </div>
+        <aside class="demo" aria-label="Live transpose demo">
+          <div class="demo-top">
+            <span class="demo-name">Amazing Grace</span>
+            <span class="demo-key">Key <b id="demoKey">G</b></span>
+          </div>
+          <div class="demo-body" id="demoBody"></div>
+          <div class="demo-ctrl">
+            <button class="pill pill-ghost pill-sq" id="demoDown" aria-label="Transpose down">-1</button>
+            <span class="demo-hint">Try it: change the key</span>
+            <button class="pill pill-amber pill-sq" id="demoUp" aria-label="Transpose up">+1</button>
+          </div>
+        </aside>
+      </div>
 
-:root[data-theme="light"] {
-  --bg: #f7f0e4;
-  --glow: #e6c68a;
-  --glow-soft: rgba(230, 198, 138, .65);
-  --panel: #ecd9b4;
-  --card: #fff8ea;
-  --accent: #865000;
-  --text: #2b1d0a;
-  --muted: #5e4b2c;
-  --faint: rgba(43, 29, 10, .18);
-  --field: #fffaf0;
-  --field-ink: #2b1d0a;
-  --chip: #e2c892;
-  --chord: #865000;
-  --danger: #b8402a;
-  color-scheme: light;
-}
+      <div class="panel">
+        <h2 class="display panel-title">On repeat.</h2>
+        <div class="grid grid-3" id="repeatGrid"></div>
+      </div>
+    </div>
+  </section>
 
-/* ---------- Base ---------- */
-* { box-sizing: border-box; margin: 0; }
+  <section id="about" class="about">
+    <div class="wrap about-grid">
+      <div class="about-copy">
+        <p class="eyebrow">Built around your music</p>
+        <h2 class="display about-title">Simplify Music.<br>Organize Every Song.</h2>
+        <p class="lead">CHORDIFY is a songbook for bands and worship teams. Keep every chord sheet in one place, change the key when the singer asks, and get ready for Sunday without digging through photos and PDFs.</p>
+        <p class="about-chords" aria-hidden="true">G &nbsp;C &nbsp;Em &nbsp;D</p>
+        <p class="display closing">One place. Every rehearsal. Every stage.</p>
+      </div>
 
-html { -webkit-text-size-adjust: 100%; }
+      <div class="about-list">
+        <article class="feature">
+          <p class="glyph">D &rarr; E</p>
+          <div><h3 class="display">Find your key.</h3><p>Move any song up or down until it fits the singer. The capo helper shows which shapes to play.</p></div>
+        </article>
+        <article class="feature">
+          <p class="glyph">&darr; 1&times;</p>
+          <div><h3 class="display">Stay in the flow.</h3><p>Auto-scroll follows your pace, so your hands stay on the instrument and not on the screen.</p></div>
+        </article>
+        <article class="feature">
+          <p class="glyph">Aa &rarr; PPTX</p>
+          <div><h3 class="display">Share every word.</h3><p>Turn lyrics into a PowerPoint for the room to sing along, or print a clean chord sheet.</p></div>
+        </article>
+        <article class="feature">
+          <p class="glyph">01 02 03</p>
+          <div><h3 class="display">Plan your Sunday.</h3><p>Build a setlist with a name, a date and the songs in order. Make as many as you need.</p></div>
+        </article>
+      </div>
+    </div>
+  </section>
 
-body {
-  font-family: var(--font-ui);
-  background: var(--bg) linear-gradient(180deg, var(--glow) 0, var(--bg) 520px) no-repeat;
-  color: var(--text);
-  line-height: 1.5;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
+</div>
 
-main { flex: 1; }
+<!-- SONGS (read-only: browse and open) -->
+<section id="songsView" class="page hidden">
+  <div class="wrap">
+    <p class="eyebrow">The songbook</p>
+    <div class="page-head">
+      <h1 class="display page-title">All songs</h1>
+      <button class="pill pill-amber" data-go="setlists"><span>My setlists (<span id="setCount">0</span>)</span></button>
+    </div>
+    <div class="search-stage">
+      <label class="search-hero">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" id="songsSearch" placeholder="Search by title or lyrics..." autocomplete="off" aria-label="Search songs">
+      </label>
+    </div>
+    <p class="muted center" id="songsInfo"></p>
+    <div class="grid grid-auto" id="songGrid"></div>
+  </div>
+</section>
 
-a { color: inherit; text-decoration: none; }
-button, input, textarea { font: inherit; color: inherit; }
-button { cursor: pointer; }
-ul { padding: 0; list-style: none; }
+<!-- SONG VIEW -->
+<section id="songView" class="page hidden">
+  <div class="toolbar">
+    <div class="wrap toolbar-in">
+      <button class="pill pill-ghost" id="backBtn" data-go="songs">&larr; Back</button>
 
-.hidden { display: none !important; }
+      <div class="tgroup" role="group" aria-label="Key">
+        <span class="tlabel">Key</span>
+        <button class="pill pill-flat pill-sq" onclick="shift(-1)" aria-label="Transpose down">-1</button>
+        <span id="keyLabel" class="tval"></span>
+        <button class="pill pill-flat pill-sq" onclick="shift(1)" aria-label="Transpose up">+1</button>
+      </div>
 
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+      <div class="tgroup" role="group" aria-label="Capo">
+        <span class="tlabel">Capo</span>
+        <button class="pill pill-flat pill-sq" onclick="changeCapo(-1)" aria-label="Capo down">-</button>
+        <span id="capoLabel" class="tval">0</span>
+        <button class="pill pill-flat pill-sq" onclick="changeCapo(1)" aria-label="Capo up">+</button>
+        <span id="capoNote" class="tnote"></span>
+      </div>
 
-.wrap { width: min(1200px, 100% - 2 * var(--gutter)); margin-inline: auto; }
-.narrow { max-width: 760px; }
+      <div class="tgroup" role="group" aria-label="Text size">
+        <span class="tlabel">Text</span>
+        <button class="pill pill-flat pill-sq" onclick="changeFs(-2)" aria-label="Smaller text">A-</button>
+        <button class="pill pill-flat pill-sq" onclick="changeFs(2)" aria-label="Bigger text">A+</button>
+      </div>
 
-.display { font-family: var(--font-display); font-weight: 900; line-height: 1.05; text-wrap: balance; }
-.accent { color: var(--accent); }
-.muted { color: var(--muted); }
+      <button class="pill pill-ghost" id="modeBtn" onclick="toggleMode()">Chords only</button>
 
-.eyebrow {
-  font-size: .72rem;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 20px;
-}
+      <div class="tgroup tgroup-end" role="group" aria-label="Auto scroll">
+        <button class="pill pill-flat" id="scrollBtn" onclick="toggleScroll()">Start scroll</button>
+        <input type="range" min="10" max="150" value="30" oninput="setSpeed(this.value)" aria-label="Scroll speed">
+      </div>
+    </div>
+    <div class="wrap set-nav hidden" id="setNav">
+      <button class="pill pill-ghost" onclick="stepSetlist(-1)" id="prevBtn">&larr; Prev</button>
+      <span class="set-nav-title"></span>
+      <button class="pill pill-amber" onclick="stepSetlist(1)" id="nextBtn">Next &rarr;</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="song-head">
+      <h1 class="display song-title" id="songTitle"></h1>
+      <div class="song-actions">
+        <button class="pill pill-ghost" onclick="exportPptx()">PPTX</button>
+        <button class="pill pill-ghost" onclick="window.print()">Print / PDF</button>
+      </div>
+    </div>
+    <div class="song-note hidden" id="songNote"><span class="tlabel">Note</span><p id="songNoteText"></p></div>
+    <div id="out"></div>
+    <div class="set-nav hidden" id="setNavEnd">
+      <button class="pill pill-ghost" onclick="stepSetlist(-1)" id="prevBtn2">&larr; Prev</button>
+      <span class="set-nav-title"></span>
+      <button class="pill pill-amber" onclick="stepSetlist(1)" id="nextBtn2">Next &rarr;</button>
+    </div>
+    <div class="song-spacer"></div>
+  </div>
+</section>
 
-.lead { color: var(--muted); max-width: 52ch; margin: 22px 0 28px; font-size: 1.02rem; }
+<!-- ALL SETLISTS -->
+<section id="setlistsView" class="page hidden">
+  <div class="wrap">
+    <p class="eyebrow">Your services</p>
+    <div class="page-head">
+      <h1 class="display page-title">Setlists</h1>
+      <button class="pill pill-amber" data-go="newsetlist">+ Create setlist</button>
+    </div>
+    <p class="muted" id="setlistsInfo"></p>
+    <div class="grid grid-auto" id="setlistsGrid"></div>
+  </div>
+</section>
 
-/* ---------- Buttons ---------- */
-.pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 20px;
-  border: 0;
-  border-radius: 999px;
-  font-size: .8rem;
-  font-weight: 500;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  transition: transform .15s, background .15s, opacity .15s;
-}
-.pill:hover { transform: translateY(-1px); }
-.pill:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+<!-- ONE SETLIST -->
+<section id="setView" class="page hidden">
+  <div class="wrap narrow">
+    <p class="eyebrow" id="slvEyebrow"></p>
+    <h1 class="display page-title" id="slvTitle"></h1>
+    <p class="muted" id="slvMeta"></p>
+    <div class="row-actions">
+      <button class="pill pill-ghost" data-go="setlists">&larr; Back</button>
+      <button class="pill pill-amber" onclick="exportSetlistPptx()">Export PPTX</button>
+      <button class="pill pill-ghost" onclick="go('editsetlist/' + viewId)">Edit</button>
+      <button class="pill pill-danger" onclick="deleteSetlist()">Delete</button>
+    </div>
+    <ul class="list" id="slvItems"></ul>
+  </div>
+</section>
 
-.pill-amber { background: var(--amber); color: var(--amber-ink); }
-.pill-amber:hover { background: #ffc566; }
-.pill-lg { min-height: 52px; padding: 0 30px; font-size: .82rem; }
-.pill-dark { background: var(--chip); color: #f6efe3; min-height: 40px; }
-.pill-light { background: #f6efe3; color: #2b1d08; min-height: 40px; }
-.pill-ghost { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px var(--faint); }
-.pill-ghost:hover { box-shadow: inset 0 0 0 1px var(--accent); }
-.pill-danger { background: transparent; color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger); }
-.pill-danger:hover:not(:disabled) { background: var(--danger); color: #fff; }
-.pill-sq { padding: 0; width: 44px; }
+<!-- CREATE / EDIT SETLIST -->
+<section id="setEditView" class="page hidden">
+  <div class="wrap">
+    <p class="eyebrow">Setlists</p>
+    <h1 class="display page-title" id="slHeading">Create setlist</h1>
 
-/* ---------- Navigation ---------- */
-.nav {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  height: var(--nav-h);
-  transition: background .2s, box-shadow .2s;
-}
-.nav.scrolled {
-  background: var(--bg);
-  background: color-mix(in srgb, var(--bg) 80%, transparent);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 1px 0 var(--faint);
-}
-.nav-in { height: 100%; display: flex; align-items: center; gap: clamp(12px, 2.4vw, 28px); }
+    <div class="sl-meta">
+      <div>
+        <label class="field-label" for="slName">Name</label>
+        <input class="field" type="text" id="slName" placeholder="e.g. Sunday 9am service" maxlength="60">
+      </div>
+      <div>
+        <label class="field-label" for="slDate">Date</label>
+        <input class="field" type="date" id="slDate">
+      </div>
+    </div>
 
-.logo { font-family: var(--font-display); font-weight: 900; font-size: 1.5rem; letter-spacing: .04em; }
+    <div class="search-stage">
+      <label class="search-hero">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" id="pickSearch" placeholder="Search songs to add..." autocomplete="off" aria-label="Search songs to add">
+      </label>
+    </div>
 
-.links { display: flex; gap: clamp(12px, 2vw, 24px); }
-.links a {
-  font-size: .85rem;
-  padding: 6px 0;
-  border-bottom: 2px solid transparent;
-  transition: border-color .2s;
-}
-.links a:hover { border-color: var(--faint); }
-.links a[aria-current="page"], .nav-manage[aria-current="page"] { border-color: var(--accent); }
-.nav-manage[aria-current="page"] { box-shadow: inset 0 0 0 2px var(--accent); }
+    <div class="sl-cols">
+      <div>
+        <h2 class="display col-title">Songs <span class="muted col-note" id="pickInfo"></span></h2>
+        <ul class="list picker" id="pickList"></ul>
+      </div>
+      <div>
+        <h2 class="display col-title">In this setlist (<span id="slCount">0</span>)</h2>
+        <p class="muted hint">Drag by the handle to reorder, or use the arrows.</p>
+        <ul class="list" id="slItems"></ul>
+      </div>
+    </div>
 
-.search {
-  margin-left: auto;
-  flex: 0 1 340px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 16px;
-  background: var(--field);
-  color: var(--field-ink);
-  border-radius: 999px;
-}
-.search input {
-  width: 100%;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--field-ink);
-  font-size: .85rem;
-}
-.search input::placeholder { color: var(--field-ink); opacity: .75; }
-.search:focus-within { box-shadow: 0 0 0 2px var(--accent); }
+    <div class="row-actions">
+      <button class="pill pill-amber" onclick="saveSetlistDraft()">Save setlist</button>
+      <button class="pill pill-ghost" onclick="go('setlists')">Cancel</button>
+    </div>
+  </div>
+</section>
 
-/* ---------- Home ---------- */
-.hero { padding: clamp(28px, 6vw, 72px) 0 clamp(48px, 8vw, 96px); }
+<!-- MANAGE -->
+<section id="manageView" class="page hidden">
+  <div class="wrap">
+    <p class="eyebrow">Your library</p>
+    <h1 class="display page-title">Manage library</h1>
+    <div class="grid grid-auto actions">
+      <button class="action" data-go="edit"><span class="idx">01</span><strong>Add song</strong><small>Type or paste one song</small></button>
+      <button class="action" data-go="import"><span class="idx">02</span><strong>Add multiple songs</strong><small>Paste many songs at once</small></button>
+      <button class="action" id="undoBtn" onclick="undoImport()"><span class="idx">03</span><strong>Undo last import</strong><small id="undoNote">Nothing to undo</small></button>
+      <button class="action" data-go="delete"><span class="idx">04</span><strong>Select songs to delete</strong><small>Remove several at once</small></button>
+      <button class="action" onclick="exportBackup()"><span class="idx">05</span><strong>Back up library</strong><small>Download a copy of all songs</small></button>
+      <button class="action" onclick="document.getElementById('restoreFile').click()"><span class="idx">06</span><strong>Restore from backup</strong><small>Add songs from a backup file</small></button>
+    </div>
+    <input type="file" id="restoreFile" accept=".json" class="hidden" onchange="restoreBackup(this)">
 
-.hero-title { font-size: clamp(2.7rem, 8vw, 5.4rem); }
+    <h2 class="display section-title">Your songs (<span id="manageCount">0</span>)</h2>
+    <ul class="list" id="manageList"></ul>
+  </div>
+</section>
 
-.hero-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: clamp(24px, 5vw, 64px); align-items: center; }
-.hero-copy, .demo { min-width: 0; }
+<!-- ADD / EDIT SONG -->
+<section id="editView" class="page hidden">
+  <div class="wrap narrow">
+    <p class="eyebrow">Manage</p>
+    <h1 class="display page-title" id="editHeading"></h1>
+    <label class="field-label" for="fTitle">Title</label>
+    <input class="field" type="text" id="fTitle" placeholder="Title">
+    <label class="field-label" for="fKey">Key</label>
+    <input class="field" type="text" id="fKey" placeholder="Key (e.g. G)">
+    <label class="field-label" for="fNote">Note (optional)</label>
+    <textarea class="field short" id="fNote" rows="3" maxlength="400" placeholder="e.g. Start slow. Drums join at the chorus."></textarea>
+    <label class="field-label" for="fBody">Chords and lyrics</label>
+    <textarea class="field mono" id="fBody" placeholder="[G]Amazing [C]grace, how [G]sweet the [D]sound"></textarea>
+    <div class="row-actions">
+      <button class="pill pill-amber" onclick="saveSong()">Save</button>
+      <button class="pill pill-ghost" onclick="tidyBox()">Tidy format</button>
+      <button class="pill pill-ghost" data-go="manage">Cancel</button>
+      <button class="pill pill-danger" id="delBtn" onclick="deleteSong()">Delete</button>
+    </div>
+  </div>
+</section>
 
-.demo {
-  background: var(--card);
-  border-radius: 10px;
-  padding: clamp(18px, 2.5vw, 28px);
-  box-shadow: inset 0 0 0 1px var(--faint);
-}
-.demo-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 18px; }
-.demo-name { font-family: var(--font-display, inherit); font-size: 1.25rem; font-weight: 600; }
-.demo-key { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.demo-key b { color: var(--amber); font-size: 1rem; text-transform: none; letter-spacing: 0; }
-.demo-body { font-family: var(--font-mono); font-size: .95rem; line-height: 1.3; display: flex; flex-wrap: wrap; row-gap: 14px; margin-bottom: 20px; }
-.demo-body .seg { display: inline-flex; flex-direction: column; margin-right: .6em; }
-.demo-body .seg i { font-style: normal; font-weight: 700; color: var(--amber); min-height: 1.3em; }
-.demo-ctrl { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.demo-hint { font-size: .78rem; color: var(--muted); text-align: center; }
+<!-- ADD MULTIPLE SONGS -->
+<section id="importView" class="page hidden">
+  <div class="wrap narrow">
+    <p class="eyebrow">Manage</p>
+    <h1 class="display page-title">Add multiple songs</h1>
+    <p class="muted">One song after another. A title line, then one line per section, like the example below.</p>
+    <textarea class="field mono" id="importBox" aria-label="Songs to import" placeholder="Heart of Worship&#10;Intro: D A G A&#10;Verse: D A G A&#10;Refrain: Em G A 4x&#10;&#10;Another Song&#10;Intro: F C D F&#10;Chorus: C G Am F 2x"></textarea>
+    <label class="check"><input type="checkbox" id="replaceBox"> Replace songs with the same title (overwrites their chords and lyrics)</label>
+    <div class="row-actions">
+      <button class="pill pill-amber" onclick="importSongs()">Import</button>
+      <button class="pill pill-ghost" data-go="manage">Cancel</button>
+    </div>
+  </div>
+</section>
 
-.panel {
-  margin-top: clamp(48px, 8vw, 88px);
-  padding: clamp(20px, 3.5vw, 40px);
-  background: var(--panel);
-  border-radius: 6px;
-}
-.panel-title { font-size: clamp(1.6rem, 3vw, 2.2rem); margin-bottom: 22px; }
+<!-- SELECT TO DELETE -->
+<section id="deleteView" class="page hidden">
+  <div class="wrap narrow">
+    <p class="eyebrow">Manage</p>
+    <h1 class="display page-title">Select songs to delete</h1>
+    <div class="row-actions">
+      <button class="pill pill-danger" id="deleteSelectedBtn" onclick="deleteSelectedSongs()">Delete selected (0)</button>
+      <button class="pill pill-ghost" onclick="selectAllSongs()">Select all</button>
+      <button class="pill pill-ghost" data-go="manage">Cancel</button>
+    </div>
+    <ul class="list" id="deleteList"></ul>
+  </div>
+</section>
 
-/* ---------- About ---------- */
-.about {
-  padding: clamp(36px, 5vw, 64px) 0 clamp(44px, 6vw, 80px);
-  background: linear-gradient(180deg, var(--glow-soft), transparent 420px);
-}
-.about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px, 5vw, 64px); align-items: center; }
-.about-copy, .about-list { min-width: 0; }
-.about-title { font-size: clamp(2.2rem, 5.2vw, 3.7rem); }
-.about .lead { margin: 20px 0 18px; }
-.about-chords {
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: clamp(1.3rem, 3vw, 1.8rem);
-  letter-spacing: .06em;
-  color: var(--accent);
-  margin-bottom: 22px;
-  white-space: pre-wrap;
-}
-.closing { font-size: clamp(1.4rem, 3vw, 2rem); max-width: 22ch; }
-.about-list { display: grid; gap: 12px; }
-.feature {
-  display: grid;
-  grid-template-columns: 7.5rem 1fr;
-  align-items: center;
-  gap: 18px;
-  padding: 20px 22px;
-  background: var(--panel);
-  border-radius: 6px;
-}
-.glyph { font-family: var(--font-mono); font-weight: 700; color: var(--accent); font-size: 1.05rem; }
-.feature h3 { font-size: 1.3rem; margin-bottom: 4px; }
-.feature p:not(.glyph) { color: var(--muted); font-size: .9rem; }
+</main>
 
-.idx { font-size: .72rem; letter-spacing: .12em; color: var(--muted); }
+<footer class="footer">
+  <div class="wrap footer-in">
+    <span>CHORDIFY&nbsp; / &nbsp;Less setup. More music.</span>
+    <span>Made for the way you play.</span>
+  </div>
+</footer>
 
-/* ---------- Grids and cards ---------- */
-.grid { display: grid; gap: 16px; }
-.grid-3 { grid-template-columns: repeat(3, 1fr); }
-.grid-auto { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+<!-- confirm dialog + toast -->
+<dialog id="dlg">
+  <p id="dlgMsg"></p>
+  <div class="row-actions">
+    <button class="pill pill-ghost" id="dlgNo">Cancel</button>
+    <button class="pill pill-amber" id="dlgOk">Confirm</button>
+  </div>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
 
-.song-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-  padding: 18px 20px 20px;
-  background: var(--card);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: transform .15s, box-shadow .15s;
-}
-.song-card:hover { transform: translateY(-3px); box-shadow: 0 0 0 1px var(--accent); }
-.card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.key-chip {
-  font-size: .68rem;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: var(--chip);
-  color: #f6efe3;
-}
-:root[data-theme="light"] .key-chip { color: #2b1d0a; }
-.song-card h3 { font-size: 1.45rem; overflow-wrap: anywhere; }
-.song-card .preview { font-family: var(--font-mono); font-size: .82rem; color: var(--muted); min-height: 1.3em; overflow-wrap: anywhere; }
-.card-foot { margin-top: auto; padding-top: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.play { font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
-.mini {
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 999px;
-  font-size: .68rem;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  background: transparent;
-  color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--faint);
-}
-.mini.on { background: var(--amber); color: var(--amber-ink); box-shadow: none; }
-
-.empty { color: var(--muted); padding: 20px 0; }
-
-/* ---------- Inner pages ---------- */
-.page { padding: clamp(20px, 4vw, 48px) 0 80px; }
-.page-title { font-size: clamp(2.2rem, 6vw, 3.6rem); margin-bottom: 8px; }
-.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
-.page-head .page-title { margin-bottom: 0; }
-#songsInfo { margin-bottom: 26px; }
-#setlistsInfo { margin: 6px 0 22px; }
-.section-title { font-size: 1.7rem; margin: 48px 0 16px; }
-.row-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0; }
-
-.actions { margin-top: 28px; }
-.action {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  text-align: left;
-  padding: 18px 20px 20px;
-  border: 0;
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  transition: transform .15s, box-shadow .15s;
-}
-.action:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 0 0 1px var(--accent); }
-.action strong { font-family: var(--font-display); font-size: 1.25rem; font-weight: 900; }
-.action small { color: var(--muted); font-size: .82rem; }
-.action:disabled { opacity: .5; cursor: not-allowed; }
-
-.list li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--faint);
-}
-.list li .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.list li.clickable { cursor: pointer; }
-.list li.clickable:hover .grow { color: var(--accent); }
-.list .key { color: var(--muted); font-size: .85rem; }
-.check-row { display: flex; align-items: center; gap: 12px; width: 100%; cursor: pointer; }
-input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--amber); flex: none; }
-
-/* ---------- Big centered search (All songs, Create setlist) ---------- */
-.search-stage { display: flex; justify-content: center; padding: clamp(22px, 6vh, 64px) 0 clamp(14px, 3vh, 28px); }
-.search-hero {
-  width: min(680px, 100%);
-  height: 58px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 22px;
-  background: var(--field);
-  color: var(--field-ink);
-  border-radius: 999px;
-}
-.search-hero input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--field-ink); font-size: 1.02rem; }
-.search-hero input::placeholder { color: var(--field-ink); opacity: .75; }
-.search-hero:focus-within { box-shadow: 0 0 0 2px var(--accent); }
-.center { text-align: center; }
-
-/* the top bar search is replaced by the big one on these pages */
-@media (min-width: 721px) {
-  body[data-view="songsView"] .nav .search,
-  body[data-view="setEditView"] .nav .search { display: none; }
-  body[data-view="songsView"] .nav-manage,
-  body[data-view="setEditView"] .nav-manage { margin-left: auto; }
-}
-@media (max-width: 720px) {
-  body[data-view="songsView"] .nav .search,
-  body[data-view="setEditView"] .nav .search { display: none; }
-}
-
-/* ---------- Create / edit setlist ---------- */
-.sl-meta { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; max-width: 760px; }
-.sl-cols { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(20px, 4vw, 48px); align-items: start; }
-.sl-cols > div { min-width: 0; }
-.col-title { font-size: 1.4rem; margin-bottom: 6px; }
-.col-note { font-family: var(--font-ui); font-size: .78rem; font-weight: 400; margin-left: 6px; }
-.picker { max-height: 460px; overflow-y: auto; }
-.list li .grip { color: var(--muted); cursor: grab; letter-spacing: -2px; user-select: none; }
-.list li.dragging { opacity: .4; }
-.list li.over { box-shadow: 0 2px 0 var(--amber); }
-.hint { font-size: .82rem; margin: 2px 0 8px; }
-
-/* ---------- Forms ---------- */
-.field-label { display: block; font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 18px 0 6px; }
-.field {
-  width: 100%;
-  padding: 12px 14px;
-  background: var(--card);
-  color: var(--text);
-  border: 1px solid var(--faint);
-  border-radius: 10px;
-}
-.field:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-textarea.field { min-height: 340px; resize: vertical; line-height: 1.5; }
-textarea.field.short { min-height: 0; }
-.mono { font-family: var(--font-mono); font-size: .9rem; }
-.check { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; color: var(--muted); font-size: .9rem; }
-#importView .muted { margin: 4px 0 18px; }
-
-/* ---------- Song view ---------- */
-.toolbar {
-  position: sticky;
-  top: var(--nav-h);
-  z-index: 10;
-  padding: 10px 0;
-  background: var(--bg);
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 1px 0 var(--faint);
-}
-.toolbar-in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
-
-/* a labelled group of controls: KEY [-] G [+] */
-.tgroup {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 0 4px 0 16px;
-  border-radius: 999px;
-  box-shadow: inset 0 0 0 1px var(--faint);
-}
-.tgroup-end { margin-left: auto; padding-left: 4px; gap: 8px; padding-right: 16px; }
-.tlabel { font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
-.tval { min-width: 2.6em; text-align: center; font-family: var(--font-mono); font-size: .95rem; font-weight: 700; color: var(--accent); }
-.tnote { font-size: .72rem; color: var(--accent); margin: 0 12px 0 4px; white-space: nowrap; }
-.tnote:empty { display: none; }
-.pill-flat { background: transparent; color: var(--text); }
-.pill-flat:hover { background: var(--faint); transform: none; }
-input[type="range"] { width: 110px; accent-color: var(--amber); }
-
-.song-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; margin: 32px 0 20px; }
-.song-head .song-title { margin: 0; }
-.song-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.song-title { font-size: clamp(2rem, 5vw, 3.2rem); margin: 32px 0 20px; }
-
-#out {
-  font-family: var(--font-mono);
-  font-size: 18px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-#out div { line-height: 1.5; }
-#out .chord { font-weight: 700; color: var(--chord); margin-top: .6em; }
-#out .label { margin-top: 1.4em; font-size: .78em; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-#out .cline { margin-top: .7em; color: var(--chord); }
-#out .cline b { color: var(--text); font-weight: 700; }
-#out .ccont { color: var(--chord); }
-
-/* note on a song */
-.song-note {
-  max-width: 70ch;
-  margin: 0 0 22px;
-  padding: 12px 16px 14px;
-  background: var(--card);
-  border-left: 3px solid var(--accent);
-  border-radius: 6px;
-}
-.song-note .tlabel { display: block; margin: 0 0 4px; }
-.song-note p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .95rem; }
-
-/* previous / next song inside a setlist */
-.set-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 10px; }
-.set-nav.hidden { display: none; }
-.set-nav-title { flex: 1; min-width: 0; text-align: center; font-size: .82rem; color: var(--muted); overflow-wrap: anywhere; }
-.set-nav-title b { color: var(--text); font-weight: 600; }
-#setNavEnd { margin-top: 36px; }
-.song-spacer { height: 60vh; }
-
-/* ---------- Footer, dialog, toast ---------- */
-.footer { border-top: 1px solid var(--faint); margin-top: 20px; }
-.footer-in { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 18px 0 24px; font-size: .72rem; color: var(--muted); }
-
-dialog {
-  margin: auto;
-  max-width: min(420px, calc(100% - 32px));
-  padding: 24px;
-  background: var(--card);
-  color: var(--text);
-  border: 1px solid var(--faint);
-  border-radius: 20px;
-}
-dialog::backdrop { background: rgba(0, 0, 0, .65); }
-dialog .row-actions { margin-bottom: 0; justify-content: flex-end; }
-
-#toast {
-  position: fixed;
-  left: 50%;
-  bottom: max(24px, env(safe-area-inset-bottom));
-  transform: translate(-50%, 20px);
-  max-width: calc(100% - 32px);
-  padding: 12px 22px;
-  background: var(--amber);
-  color: var(--amber-ink);
-  font-size: .9rem;
-  font-weight: 500;
-  border-radius: 999px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s, transform .2s;
-  z-index: 50;
-}
-#toast.show { opacity: 1; transform: translate(-50%, 0); }
-#toast.show.has-action { pointer-events: auto; padding-right: 8px; display: flex; align-items: center; gap: 14px; }
-.toast-btn {
-  min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px;
-  background: var(--amber-ink); color: var(--amber);
-  font: inherit; font-weight: 700; cursor: pointer;
-}
-
-/* ---------- Responsive ---------- */
-@media (max-width: 860px) {
-  .grid-3 { grid-template-columns: 1fr; }
-  .hero-grid, .about-grid, .sl-cols { grid-template-columns: 1fr; }
-  .demo { max-width: 460px; }
-}
-
-@media (max-width: 720px) {
-  :root { --nav-h: 108px; }
-  .nav-in { flex-wrap: wrap; align-content: center; gap: 8px 12px; }
-  .logo { order: 1; margin-right: auto; font-size: 1.35rem; }
-  .nav-manage { order: 2; }
-  #themeBtn { order: 3; }
-  .links { order: 4; }
-  .search { order: 5; margin-left: 0; flex: 1 1 160px; }
-  #out { font-size: 15px; }
-  .toolbar-in { gap: 8px; }
-  /* phone: the controls scroll away with the page; the scroll button floats at the bottom so it stays in thumb reach */
-  .toolbar { position: static; -webkit-backdrop-filter: none; backdrop-filter: none; }
-  .tgroup-end {
-    position: fixed;
-    z-index: 15;
-    left: max(var(--gutter), env(safe-area-inset-left, 0px));
-    right: max(var(--gutter), env(safe-area-inset-right, 0px));
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-    justify-content: space-between;
-    margin: 0;
-    background: var(--bg);
-    box-shadow: inset 0 0 0 1px var(--accent), 0 6px 24px rgba(0, 0, 0, .35);
-  }
-  .tgroup-end input[type="range"] { flex: 1; }
-  .sl-meta { grid-template-columns: 1fr; }
-  .feature { grid-template-columns: 1fr; gap: 6px; }
-  .search-hero { height: 52px; }
-  .footer-in { flex-direction: column; }
-}
-
-/* ---------- Print / Save as PDF (song view) ---------- */
-@media print {
-  .nav, .toolbar, .footer, .song-actions, #toast, dialog { display: none !important; }
-  html, body { background: #fff !important; color: #000 !important; }
-  body { padding: 0 !important; }
-  .song-title { color: #000 !important; margin: 0 0 14px; font-size: 26pt; }
-  #out { color: #000 !important; }
-  .song-spacer, .set-nav { display: none !important; }
-  .song-note { background: none !important; border-left: 2px solid #000 !important; color: #000 !important; }
-  .song-note .tlabel { color: #000 !important; }
-  #out .chord, #out .cline, #out .ccont { color: #000 !important; font-weight: 700; }
-  #out .cline b, #out .label { color: #000 !important; }
-  #out .label { font-weight: 700; }
-  #out div { break-inside: avoid; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; }
-}
+<script src="pptxgen.bundle.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
