@@ -427,12 +427,12 @@ document.addEventListener("visibilitychange", () => {
 
 /* ---------- SMALL UI HELPERS ---------- */
 let toastTimer;
-function toast(msg) {
+function toast(msg, ms = 3500) {
   const t = $("toast");
   t.textContent = msg;
   t.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("show"), 3500);
+  toastTimer = setTimeout(() => t.classList.remove("show"), ms);
 }
 
 function ask(msg, okLabel = "Confirm") {
@@ -778,6 +778,7 @@ function renderManage() {
     ? `${lastImport.added.length} added, ${lastImport.updated.length} replaced`
     : "Nothing to undo";
 
+  $("manageCount").textContent = songs.length;
   const ul = $("manageList");
   ul.innerHTML = "";
   if (!songs.length) { ul.appendChild(el("li", "", "No songs yet. Add your first song above.")); return; }
@@ -1005,9 +1006,11 @@ function restoreBackup(input) {
       if (!Array.isArray(incoming)) throw new Error("bad file");
 
       const ids = new Set(songs.map(s => s.id));
-      let added = 0;
+      let added = 0, already = 0, bad = 0;
       incoming.forEach(s => {
-        if (s && s.id && s.title && !ids.has(s.id)) { songs.push(s); ids.add(s.id); added++; }
+        if (!s || !s.id || !s.title) bad++;
+        else if (ids.has(s.id)) already++;
+        else { songs.push(s); ids.add(s.id); added++; }
       });
       persist();
 
@@ -1025,7 +1028,13 @@ function restoreBackup(input) {
         addedSets++;
       }
       saveSetlists();
-      toast(`Restored ${added} song${added === 1 ? "" : "s"}` + (addedSets ? ` and ${addedSets} setlist${addedSets === 1 ? "" : "s"}` : ""));
+      const n = x => `${x} song${x === 1 ? "" : "s"}`;
+      toast(
+        `File has ${n(incoming.length)}. Added ${added}, already here ${already}` + (bad ? `, unreadable ${bad}` : "") +
+        (addedSets ? `. Setlists added: ${addedSets}` : "") +
+        `. Library now has ${n(songs.length)}.`,
+        9000
+      );
       renderManage();
     } catch (e) {
       toast("That file is not a backup");
