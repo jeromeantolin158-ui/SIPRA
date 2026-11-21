@@ -66,47 +66,53 @@
   </section>
 
   <section id="about" class="about">
-    <div class="wrap">
-      <p class="eyebrow">Built around your music</p>
-      <h2 class="display about-title">Simplify Music.<br>Organize Every Song.</h2>
-      <p class="lead">From the first chord to the final chorus, CHORDIFY keeps your songs, keys and setlists in harmony. Less time preparing. More time playing.</p>
-
-      <div class="grid grid-3 features">
-        <article class="feature">
-          <span class="idx">01</span>
-          <p class="glyph">D &rarr; E</p>
-          <h3 class="display">Find your key.</h3>
-          <p>Transpose every chord in a tap. Find the range that feels right for your voice.</p>
-        </article>
-        <article class="feature">
-          <span class="idx">02</span>
-          <p class="glyph">&darr; 1&times;</p>
-          <h3 class="display">Stay in the flow.</h3>
-          <p>Let auto-scroll follow your pace. Keep your hands on your instrument, not your screen.</p>
-        </article>
-        <article class="feature">
-          <span class="idx">03</span>
-          <p class="glyph">Aa &rarr; PPTX</p>
-          <h3 class="display">Share every word.</h3>
-          <p>Turn lyrics into a PowerPoint presentation, ready for the room to sing along.</p>
-        </article>
+    <div class="wrap about-grid">
+      <div class="about-copy">
+        <p class="eyebrow">Built around your music</p>
+        <h2 class="display about-title">Simplify Music.<br>Organize Every Song.</h2>
+        <p class="lead">CHORDIFY is a songbook for bands and worship teams. Keep every chord sheet in one place, change the key when the singer asks, and get ready for Sunday without digging through photos and PDFs.</p>
+        <p class="about-chords" aria-hidden="true">G &nbsp;C &nbsp;Em &nbsp;D</p>
+        <p class="display closing">One place. Every rehearsal. Every stage.</p>
       </div>
 
-      <p class="display closing">One place. Every rehearsal. Every stage.</p>
+      <div class="about-list">
+        <article class="feature">
+          <p class="glyph">D &rarr; E</p>
+          <div><h3 class="display">Find your key.</h3><p>Move any song up or down until it fits the singer. The capo helper shows which shapes to play.</p></div>
+        </article>
+        <article class="feature">
+          <p class="glyph">&darr; 1&times;</p>
+          <div><h3 class="display">Stay in the flow.</h3><p>Auto-scroll follows your pace, so your hands stay on the instrument and not on the screen.</p></div>
+        </article>
+        <article class="feature">
+          <p class="glyph">Aa &rarr; PPTX</p>
+          <div><h3 class="display">Share every word.</h3><p>Turn lyrics into a PowerPoint for the room to sing along, or print a clean chord sheet.</p></div>
+        </article>
+        <article class="feature">
+          <p class="glyph">01 02 03</p>
+          <div><h3 class="display">Plan your Sunday.</h3><p>Build a setlist with a name, a date and the songs in order. Make as many as you need.</p></div>
+        </article>
+      </div>
     </div>
   </section>
 
 </div>
 
-<!-- SONGS (read-only: browse and make a setlist) -->
+<!-- SONGS (read-only: browse and open) -->
 <section id="songsView" class="page hidden">
   <div class="wrap">
     <p class="eyebrow">The songbook</p>
     <div class="page-head">
       <h1 class="display page-title">All songs</h1>
-      <button class="pill pill-amber" data-go="setlist">My setlist (<span id="setCount">0</span>)</button>
+      <button class="pill pill-amber" data-go="setlists"><span>My setlists (<span id="setCount">0</span>)</span></button>
     </div>
-    <p class="muted" id="songsInfo"></p>
+    <div class="search-stage">
+      <label class="search-hero">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" id="songsSearch" placeholder="Search by title or lyrics..." autocomplete="off" aria-label="Search songs">
+      </label>
+    </div>
+    <p class="muted center" id="songsInfo"></p>
     <div class="grid grid-auto" id="songGrid"></div>
   </div>
 </section>
@@ -137,7 +143,6 @@
       </div>
       <button class="pill pill-ghost" onclick="exportPptx()">PPTX</button>
       <button class="pill pill-ghost" onclick="window.print()">Print / PDF</button>
-      <button class="pill pill-ghost" id="setBtn" onclick="toggleCurrentSet()">+ Setlist</button>
     </div>
   </div>
   <div class="wrap">
@@ -146,20 +151,75 @@
   </div>
 </section>
 
-<!-- SETLIST -->
+<!-- ALL SETLISTS -->
+<section id="setlistsView" class="page hidden">
+  <div class="wrap">
+    <p class="eyebrow">Your services</p>
+    <div class="page-head">
+      <h1 class="display page-title">Setlists</h1>
+      <button class="pill pill-amber" data-go="newsetlist">+ Create setlist</button>
+    </div>
+    <p class="muted" id="setlistsInfo"></p>
+    <div class="grid grid-auto" id="setlistsGrid"></div>
+  </div>
+</section>
+
+<!-- ONE SETLIST -->
 <section id="setView" class="page hidden">
   <div class="wrap narrow">
-    <p class="eyebrow">Your service plan</p>
-    <h1 class="display page-title">Setlist</h1>
-    <label class="field-label" for="setName">Service name</label>
-    <input class="field" type="text" id="setName" placeholder="e.g. Sunday 9am" maxlength="60" oninput="saveSetName(this.value)">
-    <p class="muted hint">Drag a song by its handle to reorder (or use the arrows on phones).</p>
+    <p class="eyebrow" id="slvEyebrow"></p>
+    <h1 class="display page-title" id="slvTitle"></h1>
+    <p class="muted" id="slvMeta"></p>
     <div class="row-actions">
-      <button class="pill pill-ghost" data-go="songs">&larr; Back</button>
+      <button class="pill pill-ghost" data-go="setlists">&larr; Back</button>
       <button class="pill pill-amber" onclick="exportSetlistPptx()">Export PPTX</button>
-      <button class="pill pill-ghost" onclick="clearSetlist()">Clear</button>
+      <button class="pill pill-ghost" onclick="go('editsetlist/' + viewId)">Edit</button>
+      <button class="pill pill-danger" onclick="deleteSetlist()">Delete</button>
     </div>
-    <ul class="list" id="setItems"></ul>
+    <ul class="list" id="slvItems"></ul>
+  </div>
+</section>
+
+<!-- CREATE / EDIT SETLIST -->
+<section id="setEditView" class="page hidden">
+  <div class="wrap">
+    <p class="eyebrow">Setlists</p>
+    <h1 class="display page-title" id="slHeading">Create setlist</h1>
+
+    <div class="sl-meta">
+      <div>
+        <label class="field-label" for="slName">Name</label>
+        <input class="field" type="text" id="slName" placeholder="e.g. Sunday 9am service" maxlength="60">
+      </div>
+      <div>
+        <label class="field-label" for="slDate">Date</label>
+        <input class="field" type="date" id="slDate">
+      </div>
+    </div>
+
+    <div class="search-stage">
+      <label class="search-hero">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" id="pickSearch" placeholder="Search songs to add..." autocomplete="off" aria-label="Search songs to add">
+      </label>
+    </div>
+
+    <div class="sl-cols">
+      <div>
+        <h2 class="display col-title">Songs <span class="muted col-note" id="pickInfo"></span></h2>
+        <ul class="list picker" id="pickList"></ul>
+      </div>
+      <div>
+        <h2 class="display col-title">In this setlist (<span id="slCount">0</span>)</h2>
+        <p class="muted hint">Drag by the handle to reorder, or use the arrows.</p>
+        <ul class="list" id="slItems"></ul>
+      </div>
+    </div>
+
+    <div class="row-actions">
+      <button class="pill pill-amber" onclick="saveSetlistDraft()">Save setlist</button>
+      <button class="pill pill-ghost" onclick="go('setlists')">Cancel</button>
+    </div>
   </div>
 </section>
 

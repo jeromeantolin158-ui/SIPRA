@@ -19,12 +19,24 @@ const sample = {
 };
 
 let songs = load("sipra_songs", null) || [sample];
-let setlist = load("sipra_setlist", []);
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+/* setlists: [{ id, name, date: "YYYY-MM-DD" or "", songs: [songId, ...] }] */
+let setlists = load("chordify_setlists", null);
+if (!setlists) {                                   // first run of this version: keep the old single setlist
+  const old = load("sipra_setlist", []);
+  setlists = old.length ? [{ id: newId(), name: load("chordify_setname", "") || "My setlist", date: "", songs: old }] : [];
+  save("chordify_setlists", setlists);
+}
 let lastImport = load("sipra_undo", null);
 let recent = load("sipra_recent", []);
 
 const persist = () => save("sipra_songs", songs);
-const saveSetlist = () => save("sipra_setlist", setlist);
+const saveSetlists = () => save("chordify_setlists", setlists);
+const pruneSetlists = () => {                      // drop songs that were deleted
+  setlists.forEach(l => { l.songs = l.songs.filter(id => songs.some(s => s.id === id)); });
+  saveSetlists();
+};
 const saveRecent = () => save("sipra_recent", recent);
 const saveUndo = () => {
   if (lastImport) save("sipra_undo", lastImport);
@@ -36,7 +48,6 @@ let current = null;
 let steps = 0;
 let capo = 0;
 let fs = Number(load("chordify_fs", 0)) || 0;      // song text size in px (0 = default)
-let setName = load("chordify_setname", "");
 let chordsMode = false;
 let editingId = null;
 let delIds = new Set();
@@ -345,7 +356,6 @@ function render() {
   $("keyLabel").textContent = "Key: " + sounding + (capo && k ? " (play " + shapes + ")" : "");
   $("capoLabel").textContent = "Capo " + capo;
   $("modeBtn").textContent = chordsMode ? "Full song" : "Chords only";
-  $("setBtn").textContent = setlist.includes(current.id) ? "✓ In setlist" : "+ Setlist";
 }
 
 function shift(n) { steps += n; render(); }
@@ -357,11 +367,6 @@ function changeFs(d) {
   render();
 }
 function toggleMode() { chordsMode = !chordsMode; render(); }
-
-function toggleCurrentSet() {
-  toggleSet(current.id);
-  render();
-}
 
 window.addEventListener("resize", () => {
   clearTimeout(window.__rz);
@@ -464,7 +469,7 @@ function previewChords(s) {
     .slice(0, 6).join(" ");
 }
 
-function songCard(s, index, withSetlist) {
+function songCard(s, index) {
   const card = el("article", "song-card");
   card.tabIndex = 0;
   card.setAttribute("role", "link");
@@ -479,11 +484,6 @@ function songCard(s, index, withSetlist) {
 
   const foot = el("div", "card-foot");
   foot.appendChild(el("span", "play", "Play song ↗"));
-  if (withSetlist) {
-    const b = el("button", "mini" + (setlist.includes(s.id) ? " on" : ""), setlist.includes(s.id) ? "✓ In setlist" : "+ Setlist");
-    b.onclick = e => { e.stopPropagation(); toggleSet(s.id); renderSongs(); };
-    foot.appendChild(b);
-  }
   card.appendChild(foot);
 
   const open = () => go("song/" + s.id);
@@ -505,24 +505,24 @@ function renderHome() {
     box.appendChild(el("p", "empty", "No songs yet. Open Manage to add your first song."));
     return;
   }
-  pick.forEach((s, i) => box.appendChild(songCard(s, i, false)));
+  pick.forEach((s, i) => box.appendChild(songCard(s, i)));
 }
 
 /* ---------- SONGS (read-only) ---------- */
 function renderSongs() {
-  const raw = $("searchBox").value.trim();
+  const raw = $("songsSearch").value.trim();
   const q = raw.toLowerCase();
   const found = songs
     .filter(s => (s.title + " " + stripChords(s.body)).toLowerCase().includes(q))
     .sort(byTitle);
 
   $("songsInfo").textContent = q ? `${found.length} result${found.length === 1 ? "" : "s"} for "${raw}"` : `${songs.length} song${songs.length === 1 ? "" : "s"}`;
-  $("setCount").textContent = setlist.length;
+  $("setCount").textContent = setlists.length;
 
   const grid = $("songGrid");
   grid.innerHTML = "";
   if (!found.length) { grid.appendChild(el("p", "empty", "No songs found")); return; }
-  found.forEach((s, i) => grid.appendChild(songCard(s, i, true)));
+  found.forEach((s, i) => grid.appendChild(songCard(s, i)));
 }
 
 function openSong(s) {
@@ -536,32 +536,145 @@ function openSong(s) {
   render();
 }
 
-/* ---------- SETLIST ---------- */
-function toggleSet(id) {
-  const i = setlist.indexOf(id);
-  i === -1 ? setlist.push(id) : setlist.splice(i, 1);
-  saveSetlist();
+/* ---------- SETLISTS (many; each has a name, a date and ordered songs) ---------- */
+const getSetlist = id => setlists.find(l => l.id === id);
+
+function fmtDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  if (!m) return "";
+  return new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 }
 
-let dragFrom = null;
-function saveSetName(v) { setName = v; save("chordify_setname", v); }
+const songTitle = id => (songs.find(s => s.id === id) || {}).title || "";
 
-function renderSetlist() {
-  setlist = setlist.filter(id => songs.some(s => s.id === id));   // drop deleted songs
-  saveSetlist();
+/* --- list of all setlists --- */
+function renderSetlists() {
+  pruneSetlists();
+  const grid = $("setlistsGrid");
+  grid.innerHTML = "";
+  $("setlistsInfo").textContent = setlists.length ? `${setlists.length} setlist${setlists.length === 1 ? "" : "s"}` : "";
 
-  $("setName").value = setName;
-  const ul = $("setItems");
+  if (!setlists.length) {
+    grid.appendChild(el("p", "empty", "No setlists yet. Create one for your next service."));
+    return;
+  }
+  [...setlists].sort((a, b) => (b.date || "").localeCompare(a.date || "") || a.name.localeCompare(b.name)).forEach(l => {
+    const card = el("article", "song-card");
+    card.tabIndex = 0;
+    card.setAttribute("role", "link");
+    const top = el("div", "card-top");
+    top.appendChild(el("span", "idx", `${l.songs.length} song${l.songs.length === 1 ? "" : "s"}`));
+    if (l.date) top.appendChild(el("span", "key-chip", fmtDate(l.date)));
+    card.appendChild(top);
+    card.appendChild(el("h3", "display", l.name));
+    card.appendChild(el("p", "preview", l.songs.slice(0, 3).map(songTitle).join(" · ") || "No songs yet"));
+    const foot = el("div", "card-foot");
+    foot.appendChild(el("span", "play", "Open setlist ↗"));
+    card.appendChild(foot);
+    const open = () => go("setlist/" + l.id);
+    card.onclick = open;
+    card.onkeydown = e => { if (e.key === "Enter" && e.target === card) open(); };
+    grid.appendChild(card);
+  });
+}
+
+/* --- one setlist --- */
+let viewId = null;
+
+function renderSetlistView(id) {
+  pruneSetlists();
+  const l = getSetlist(id);
+  if (!l) { go("setlists"); return; }
+  viewId = id;
+  $("slvEyebrow").textContent = l.date ? fmtDate(l.date) : "Setlist";
+  $("slvTitle").textContent = l.name;
+  $("slvMeta").textContent = `${l.songs.length} song${l.songs.length === 1 ? "" : "s"}`;
+
+  const ul = $("slvItems");
   ul.innerHTML = "";
-  if (!setlist.length) {
-    const li = el("li", "", 'Empty. Use "+ Setlist" on a song.');
+  if (!l.songs.length) { ul.appendChild(el("li", "", "No songs yet. Press Edit to add some.")); return; }
+  l.songs.forEach((sid, i) => {
+    const s = songs.find(x => x.id === sid);
+    const li = el("li", "clickable");
+    li.appendChild(el("span", "idx", String(i + 1).padStart(2, "0")));
+    li.appendChild(el("span", "grow", s.title));
+    if (s.key) li.appendChild(el("span", "key", s.key));
+    li.onclick = () => go("song/" + sid);
     ul.appendChild(li);
+  });
+}
+
+async function deleteSetlist() {
+  const l = getSetlist(viewId);
+  if (!l) return;
+  if (!(await ask(`Delete the setlist "${l.name}"? The songs stay in your library.`, "Delete"))) return;
+  setlists = setlists.filter(x => x.id !== viewId);
+  saveSetlists();
+  toast("Setlist deleted");
+  go("setlists");
+}
+
+/* --- create / edit --- */
+let draft = null;
+let dragFrom = null;
+
+function openSetlistEditor(id) {
+  const ex = id ? getSetlist(id) : null;
+  if (id && !ex) { go("setlists"); return; }
+  draft = ex
+    ? { id: ex.id, songs: ex.songs.filter(sid => songs.some(s => s.id === sid)) }
+    : { id: null, songs: [] };
+  $("slHeading").textContent = ex ? "Edit setlist" : "Create setlist";
+  $("slName").value = ex ? ex.name : "";
+  $("slDate").value = ex ? ex.date : "";
+  $("pickSearch").value = "";
+  page("setEditView");
+  renderPicker();
+  renderDraft();
+}
+
+function renderPicker() {
+  const raw = $("pickSearch").value.trim();
+  const q = raw.toLowerCase();
+  const found = songs
+    .filter(s => (s.title + " " + stripChords(s.body)).toLowerCase().includes(q))
+    .sort(byTitle);
+
+  $("pickInfo").textContent = q ? `${found.length} result${found.length === 1 ? "" : "s"} for "${raw}"` : `${songs.length} song${songs.length === 1 ? "" : "s"}`;
+  const ul = $("pickList");
+  ul.innerHTML = "";
+  if (!found.length) { ul.appendChild(el("li", "", "No songs found")); return; }
+
+  found.forEach(s => {
+    const on = draft.songs.includes(s.id);
+    const li = el("li", "clickable");
+    li.appendChild(el("span", "grow", s.title));
+    if (s.key) li.appendChild(el("span", "key", s.key));
+    const b = el("button", "mini" + (on ? " on" : ""), on ? "✓ Added" : "+ Add");
+    b.type = "button";
+    li.appendChild(b);
+    li.onclick = () => {
+      const i = draft.songs.indexOf(s.id);
+      i === -1 ? draft.songs.push(s.id) : draft.songs.splice(i, 1);
+      renderPicker();
+      renderDraft();
+    };
+    ul.appendChild(li);
+  });
+}
+
+function renderDraft() {
+  $("slCount").textContent = draft.songs.length;
+  const ul = $("slItems");
+  ul.innerHTML = "";
+  if (!draft.songs.length) {
+    ul.appendChild(el("li", "", "Nothing yet. Search for a song and press + Add."));
     return;
   }
 
-  setlist.forEach((id, i) => {
+  draft.songs.forEach((id, i) => {
     const s = songs.find(x => x.id === id);
-    const li = el("li", "clickable");
+    const li = el("li");
     li.draggable = true;
     li.addEventListener("dragstart", e => {
       dragFrom = i;
@@ -575,46 +688,48 @@ function renderSetlist() {
     li.addEventListener("drop", e => {
       e.preventDefault();
       if (dragFrom === null || dragFrom === i) return;
-      const [m] = setlist.splice(dragFrom, 1);
-      setlist.splice(i, 0, m);
+      const [m] = draft.songs.splice(dragFrom, 1);
+      draft.songs.splice(i, 0, m);
       dragFrom = null;
-      saveSetlist();
-      renderSetlist();
+      renderDraft();
     });
+
     li.appendChild(el("span", "grip", "⋮⋮"));
     li.appendChild(el("span", "idx", String(i + 1).padStart(2, "0")));
-    const g = el("span", "grow", s.title);
-    li.appendChild(g);
+    li.appendChild(el("span", "grow", s.title));
     if (s.key) li.appendChild(el("span", "key", s.key));
-    li.onclick = () => go("song/" + id);
 
     const mk = (txt, label, fn) => {
       const b = el("button", "mini", txt);
+      b.type = "button";
       b.setAttribute("aria-label", label);
-      b.onclick = e => { e.stopPropagation(); fn(); };
+      b.onclick = fn;
       return b;
     };
-    li.appendChild(mk("↑", "Move up", () => moveSet(i, -1)));
-    li.appendChild(mk("↓", "Move down", () => moveSet(i, 1)));
-    li.appendChild(mk("✕", "Remove", () => { setlist.splice(i, 1); saveSetlist(); renderSetlist(); }));
+    li.appendChild(mk("↑", "Move up", () => moveDraft(i, -1)));
+    li.appendChild(mk("↓", "Move down", () => moveDraft(i, 1)));
+    li.appendChild(mk("✕", "Remove", () => { draft.songs.splice(i, 1); renderPicker(); renderDraft(); }));
     ul.appendChild(li);
   });
 }
 
-function moveSet(i, d) {
+function moveDraft(i, d) {
   const j = i + d;
-  if (j < 0 || j >= setlist.length) return;
-  [setlist[i], setlist[j]] = [setlist[j], setlist[i]];
-  saveSetlist();
-  renderSetlist();
+  if (j < 0 || j >= draft.songs.length) return;
+  [draft.songs[i], draft.songs[j]] = [draft.songs[j], draft.songs[i]];
+  renderDraft();
 }
 
-async function clearSetlist() {
-  if (!setlist.length) return;
-  if (!(await ask("Clear the whole setlist?", "Clear"))) return;
-  setlist = [];
-  saveSetlist();
-  renderSetlist();
+function saveSetlistDraft() {
+  const name = $("slName").value.trim();
+  if (!name) { toast("Give the setlist a name"); $("slName").focus(); return; }
+  const data = { name, date: $("slDate").value, songs: draft.songs.slice() };
+  let id = draft.id;
+  if (id) Object.assign(getSetlist(id), data);
+  else { id = newId(); setlists.push({ id, ...data }); }
+  saveSetlists();
+  toast("Setlist saved");
+  go("setlist/" + id);
 }
 
 /* ---------- MANAGE ---------- */
@@ -673,9 +788,8 @@ function saveSong() {
 async function deleteSong() {
   if (!(await ask("Delete this song? This can't be undone.", "Delete"))) return;
   songs = songs.filter(s => s.id !== editingId);
-  setlist = setlist.filter(id => id !== editingId);
   recent = recent.filter(id => id !== editingId);
-  persist(); saveSetlist(); saveRecent();
+  persist(); pruneSetlists(); saveRecent();
   toast("Song deleted");
   go("manage");
 }
@@ -719,9 +833,8 @@ async function deleteSelectedSongs() {
   if (!(await ask(`Delete ${n} selected song${n === 1 ? "" : "s"}? This can't be undone.`, "Delete"))) return;
 
   songs = songs.filter(s => !delIds.has(s.id));
-  setlist = setlist.filter(id => !delIds.has(id));
   recent = recent.filter(id => !delIds.has(id));
-  persist(); saveSetlist(); saveRecent();
+  persist(); pruneSetlists(); saveRecent();
 
   toast(`${n} song${n === 1 ? "" : "s"} deleted`);
   go("manage");
@@ -825,10 +938,8 @@ async function undoImport() {
     const s = songs.find(x => x.id === u.id);
     if (s) { s.body = u.body; s.key = u.key; }
   });
-  setlist = setlist.filter(id => songs.some(s => s.id === id));
-
   lastImport = null;
-  persist(); saveSetlist(); saveUndo();
+  persist(); pruneSetlists(); saveUndo();
   toast("Import undone");
   renderManage();
 }
@@ -836,7 +947,7 @@ async function undoImport() {
 /* ---------- BACKUP / RESTORE ---------- */
 function exportBackup() {
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify({ songs, setlist }, null, 1)], { type: "application/json" }));
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ songs, setlists }, null, 1)], { type: "application/json" }));
   a.download = "chordify-backup-" + new Date().toISOString().slice(0, 10) + ".json";
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -860,11 +971,21 @@ function restoreBackup(input) {
       });
       persist();
 
-      if (Array.isArray(d.setlist)) {
-        d.setlist.forEach(id => { if (ids.has(id) && !setlist.includes(id)) setlist.push(id); });
-        saveSetlist();
+      let addedSets = 0;
+      const have = new Set(setlists.map(l => l.id));
+      if (Array.isArray(d.setlists)) {
+        d.setlists.forEach(l => {
+          if (l && l.id && l.name && Array.isArray(l.songs) && !have.has(l.id)) {
+            setlists.push({ id: l.id, name: l.name, date: l.date || "", songs: l.songs.filter(id => ids.has(id)) });
+            have.add(l.id); addedSets++;
+          }
+        });
+      } else if (Array.isArray(d.setlist) && d.setlist.length) {      // backup from the old single-setlist version
+        setlists.push({ id: newId(), name: "Imported setlist", date: "", songs: d.setlist.filter(id => ids.has(id)) });
+        addedSets++;
       }
-      toast(`Restored ${added} song${added === 1 ? "" : "s"}`);
+      saveSetlists();
+      toast(`Restored ${added} song${added === 1 ? "" : "s"}` + (addedSets ? ` and ${addedSets} setlist${addedSets === 1 ? "" : "s"}` : ""));
       renderManage();
     } catch (e) {
       toast("That file is not a backup");
@@ -908,25 +1029,23 @@ async function exportPptx() {
 }
 
 async function exportSetlistPptx() {
-  if (!setlist.length) { toast("Setlist is empty"); return; }
+  const l = getSetlist(viewId);
+  if (!l || !l.songs.length) { toast("This setlist has no songs"); return; }
   try {
     if (typeof PptxGenJS === "undefined") throw new Error("PPTX library not loaded. Check your internet or turn Brave Shields down.");
     const p = newPptx();
-    const name = setName.trim();
-    if (name) {
-      const cover = p.addSlide();
-      cover.background = { color: "000000" };
-      cover.addText(name, { x: 0.5, y: 0.5, w: 9, h: 4.5, fontSize: 48, bold: true, color: "FFFFFF", align: "center", valign: "middle", fit: "shrink" });
-    }
-    setlist.forEach(id => { const s = songs.find(x => x.id === id); if (s) addSongSlides(p, s); });
-    await p.writeFile({ fileName: (name.replace(/[\\/:*?"<>|]/g, "") || "Setlist") + ".pptx" });
+    const cover = p.addSlide();
+    cover.background = { color: "000000" };
+    cover.addText(l.name + (l.date ? "\n" + fmtDate(l.date) : ""), { x: 0.5, y: 0.5, w: 9, h: 4.5, fontSize: 48, bold: true, color: "FFFFFF", align: "center", valign: "middle", fit: "shrink" });
+    l.songs.forEach(id => { const s = songs.find(x => x.id === id); if (s) addSongSlides(p, s); });
+    await p.writeFile({ fileName: (l.name.replace(/[\\/:*?"<>|]/g, "") || "Setlist") + ".pptx" });
   } catch (e) {
     toast("PPTX failed: " + e.message);
   }
 }
 
 /* ---------- ROUTER (page changes use the address bar, so Back works) ---------- */
-const VIEWS = ["homeView", "songsView", "songView", "setView", "manageView", "editView", "importView", "deleteView"];
+const VIEWS = ["homeView", "songsView", "songView", "setlistsView", "setView", "setEditView", "manageView", "editView", "importView", "deleteView"];
 const MANAGE_GROUP = ["manage", "edit", "import", "delete"];
 let currentView = "homeView";
 
@@ -935,6 +1054,7 @@ const go = path => { location.hash = "#/" + path; };
 function show(name) {
   VIEWS.forEach(v => $(v).classList.toggle("hidden", v !== name));
   currentView = name;
+  document.body.dataset.view = name;                // lets CSS hide the top search bar on pages with the big one
 }
 
 function page(name) {
@@ -959,9 +1079,10 @@ function setNav(a) {
     $("navAbout").setAttribute("aria-current", "false");
   }
   $("navManage").setAttribute("aria-current", MANAGE_GROUP.includes(a) ? "page" : "false");
-  $("navSongs").setAttribute("aria-current", ["songs", "song", "setlist"].includes(a) ? "page" : "false");
+  $("navSongs").setAttribute("aria-current", SONG_GROUP.includes(a) ? "page" : "false");
 }
-const VIEWS_ROUTES = ["songs", "song", "setlist", "manage", "edit", "import", "delete"];
+const SONG_GROUP = ["songs", "song", "setlists", "setlist", "newsetlist", "editsetlist"];
+const VIEWS_ROUTES = [...SONG_GROUP, "manage", "edit", "import", "delete"];
 
 function route() {
   const [a, b] = location.hash.replace(/^#\/?/, "").split("/");
@@ -969,14 +1090,21 @@ function route() {
   setNav(a);
 
   switch (a) {
-    case "songs": page("songsView"); renderSongs(); break;
+    case "songs":
+      page("songsView");
+      renderSongs();
+      if (wantSearchFocus) { wantSearchFocus = false; focusEnd($("songsSearch")); }
+      break;
     case "song": {
       const s = songs.find(x => x.id === b);
       if (!s) { go("songs"); return; }
       openSong(s);
       break;
     }
-    case "setlist": page("setView"); renderSetlist(); break;
+    case "setlists": page("setlistsView"); renderSetlists(); break;
+    case "setlist": page("setView"); renderSetlistView(b); break;
+    case "newsetlist": openSetlistEditor(null); break;
+    case "editsetlist": openSetlistEditor(b); break;
     case "manage": page("manageView"); renderManage(); break;
     case "edit": openEditor(b); break;
     case "import": page("importView"); break;
@@ -997,14 +1125,22 @@ document.addEventListener("click", e => {
   else location.hash = target;
 });
 
-/* search box: typing anywhere opens the songs page with results */
-$("searchBox").addEventListener("input", () => {
-  if (currentView !== "songsView") go("songs");
-  else renderSongs();
-});
-$("searchBox").addEventListener("keydown", e => {
-  if (e.key === "Enter" && currentView !== "songsView") go("songs");
-});
+/* top search box (Home, About, Songs of a setlist...): typing sends you to the All songs page,
+   where the big search bar in the middle takes over */
+let wantSearchFocus = false;
+const focusEnd = input => { input.focus(); input.setSelectionRange(input.value.length, input.value.length); };
+
+function sendToSongsSearch() {
+  $("songsSearch").value = $("searchBox").value;
+  $("searchBox").value = "";
+  wantSearchFocus = true;
+  if (currentView === "songsView") { renderSongs(); focusEnd($("songsSearch")); wantSearchFocus = false; }
+  else { go("songs"); route(); }                    // switch right now so fast typing is not lost
+}
+$("searchBox").addEventListener("input", sendToSongsSearch);
+$("searchBox").addEventListener("keydown", e => { if (e.key === "Enter") sendToSongsSearch(); });
+$("songsSearch").addEventListener("input", renderSongs);
+$("pickSearch").addEventListener("input", () => { if (draft) renderPicker(); });
 
 /* highlight Home / About us while scrolling, and tint the nav once you scroll */
 let spyQueued = false;
