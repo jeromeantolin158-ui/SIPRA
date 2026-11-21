@@ -427,9 +427,15 @@ document.addEventListener("visibilitychange", () => {
 
 /* ---------- SMALL UI HELPERS ---------- */
 let toastTimer;
-function toast(msg, ms = 3500) {
+function toast(msg, ms = 3500, action) {
   const t = $("toast");
   t.textContent = msg;
+  t.classList.toggle("has-action", !!action);
+  if (action) {
+    const b = el("button", "toast-btn", action.label);
+    b.onclick = () => { t.classList.remove("show"); action.fn(); };
+    t.appendChild(b);
+  }
   t.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove("show"), ms);
@@ -828,11 +834,30 @@ function saveSong() {
 
 async function deleteSong() {
   if (!(await ask("Delete this song? This can't be undone.", "Delete"))) return;
+  const snap = snapshotDeleted(new Set([editingId]));
   songs = songs.filter(s => s.id !== editingId);
   recent = recent.filter(id => id !== editingId);
   persist(); pruneSetlists(); saveRecent();
-  toast("Song deleted");
+  toast("Song deleted", 8000, { label: "Undo", fn: () => undoDelete(snap) });
   go("manage");
+}
+
+/* Delete undo: remember the songs + which setlists they were in */
+function snapshotDeleted(ids) {
+  return {
+    songs: songs.filter(s => ids.has(s.id)).map(s => ({ ...s })),
+    lists: setlists.map(l => ({ id: l.id, songs: l.songs.slice() })),
+  };
+}
+function undoDelete(snap) {
+  snap.songs.forEach(s => { if (!songs.some(x => x.id === s.id)) songs.push(s); });
+  snap.lists.forEach(o => {
+    const l = setlists.find(x => x.id === o.id);
+    if (l) l.songs = o.songs.filter(id => songs.some(s => s.id === id));
+  });
+  persist(); saveSetlists();
+  toast(`Restored ${snap.songs.length} song${snap.songs.length === 1 ? "" : "s"}`);
+  route();
 }
 
 /* ---------- SELECT TO DELETE ---------- */
@@ -873,11 +898,12 @@ async function deleteSelectedSongs() {
   const n = delIds.size;
   if (!(await ask(`Delete ${n} selected song${n === 1 ? "" : "s"}? This can't be undone.`, "Delete"))) return;
 
+  const snap = snapshotDeleted(delIds);
   songs = songs.filter(s => !delIds.has(s.id));
   recent = recent.filter(id => !delIds.has(id));
   persist(); pruneSetlists(); saveRecent();
 
-  toast(`${n} song${n === 1 ? "" : "s"} deleted`);
+  toast(`${n} song${n === 1 ? "" : "s"} deleted`, 8000, { label: "Undo", fn: () => undoDelete(snap) });
   go("manage");
 }
 
