@@ -7,15 +7,15 @@
 /* ---------- Design tokens ---------- */
 :root {
   --bg: #0b0805;
-  --glow: #7b531c;
-  --glow-soft: rgba(123, 83, 28, .5);
+  --glow: #6c4818;
+  --glow-soft: rgba(108, 72, 24, .5);
   --panel: #5a3c05;
   --card: #241808;
   --amber: #ffb43e;
   --amber-ink: #1b1204;
   --accent: #ffb43e;
   --text: #f6efe3;
-  --muted: #cdbfa6;
+  --muted: #d8cbb2;
   --faint: rgba(246, 239, 227, .16);
   --field: #e8e1d3;
   --field-ink: #2b1d08;
@@ -39,14 +39,14 @@
   --glow-soft: rgba(230, 198, 138, .65);
   --panel: #ecd9b4;
   --card: #fff8ea;
-  --accent: #9a5a00;
+  --accent: #865000;
   --text: #2b1d0a;
-  --muted: #6e5a3a;
+  --muted: #5e4b2c;
   --faint: rgba(43, 29, 10, .18);
   --field: #fffaf0;
   --field-ink: #2b1d0a;
   --chip: #e2c892;
-  --chord: #9a5a00;
+  --chord: #865000;
   --danger: #b8402a;
   color-scheme: light;
 }
@@ -175,7 +175,7 @@ ul { padding: 0; list-style: none; }
   color: var(--field-ink);
   font-size: .85rem;
 }
-.search input::placeholder { color: var(--field-ink); opacity: .6; }
+.search input::placeholder { color: var(--field-ink); opacity: .75; }
 .search:focus-within { box-shadow: 0 0 0 2px var(--accent); }
 
 /* ---------- Home ---------- */
@@ -279,7 +279,8 @@ ul { padding: 0; list-style: none; }
 .card-foot { margin-top: auto; padding-top: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .play { font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
 .mini {
-  min-height: 34px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 0 14px;
   border: 0;
   border-radius: 999px;
@@ -351,7 +352,7 @@ input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--amber); 
   border-radius: 999px;
 }
 .search-hero input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--field-ink); font-size: 1.02rem; }
-.search-hero input::placeholder { color: var(--field-ink); opacity: .6; }
+.search-hero input::placeholder { color: var(--field-ink); opacity: .75; }
 .search-hero:focus-within { box-shadow: 0 0 0 2px var(--accent); }
 .center { text-align: center; }
 
@@ -407,10 +408,29 @@ textarea.field { min-height: 340px; resize: vertical; line-height: 1.5; }
   backdrop-filter: blur(10px);
   box-shadow: 0 1px 0 var(--faint);
 }
-.toolbar-in { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
-.group { display: flex; align-items: center; gap: 8px; }
-.key-label { min-width: 5.2em; text-align: center; font-family: var(--font-mono); font-size: .9rem; color: var(--accent); }
+.toolbar-in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+
+/* a labelled group of controls: KEY [-] G [+] */
+.tgroup {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px 0 16px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--faint);
+}
+.tgroup-end { margin-left: auto; padding-left: 4px; gap: 8px; padding-right: 16px; }
+.tlabel { font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
+.tval { min-width: 2.6em; text-align: center; font-family: var(--font-mono); font-size: .95rem; font-weight: 700; color: var(--accent); }
+.tnote { font-size: .72rem; color: var(--accent); margin: 0 12px 0 4px; white-space: nowrap; }
+.tnote:empty { display: none; }
+.pill-flat { background: transparent; color: var(--text); }
+.pill-flat:hover { background: var(--faint); transform: none; }
 input[type="range"] { width: 110px; accent-color: var(--amber); }
+
+.song-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; margin: 32px 0 20px; }
+.song-head .song-title { margin: 0; }
+.song-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .song-title { font-size: clamp(2rem, 5vw, 3.2rem); margin: 32px 0 20px; }
 
 #out {
@@ -480,6 +500,20 @@ dialog .row-actions { margin-bottom: 0; justify-content: flex-end; }
   .search { order: 5; margin-left: 0; flex: 1 1 160px; }
   #out { font-size: 15px; }
   .toolbar-in { gap: 8px; }
+  /* phone: the controls scroll away with the page; the scroll button floats at the bottom so it stays in thumb reach */
+  .toolbar { position: static; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .tgroup-end {
+    position: fixed;
+    z-index: 15;
+    left: max(var(--gutter), env(safe-area-inset-left, 0px));
+    right: max(var(--gutter), env(safe-area-inset-right, 0px));
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    justify-content: space-between;
+    margin: 0;
+    background: var(--bg);
+    box-shadow: inset 0 0 0 1px var(--accent), 0 6px 24px rgba(0, 0, 0, .35);
+  }
+  .tgroup-end input[type="range"] { flex: 1; }
   .sl-meta { grid-template-columns: 1fr; }
   .feature { grid-template-columns: 1fr; gap: 6px; }
   .search-hero { height: 52px; }
@@ -488,7 +522,7 @@ dialog .row-actions { margin-bottom: 0; justify-content: flex-end; }
 
 /* ---------- Print / Save as PDF (song view) ---------- */
 @media print {
-  .nav, .toolbar, .footer, #toast, dialog { display: none !important; }
+  .nav, .toolbar, .footer, .song-actions, #toast, dialog { display: none !important; }
   html, body { background: #fff !important; color: #000 !important; }
   body { padding: 0 !important; }
   .song-title { color: #000 !important; margin: 0 0 14px; font-size: 26pt; }

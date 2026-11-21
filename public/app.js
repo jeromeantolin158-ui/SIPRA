@@ -353,8 +353,9 @@ function render() {
   paint(chordsMode ? chordsOnly(t) : chordsAbove(t));
   const sounding = k ? transposeChord(k, steps, flatsFor(k, steps)) : "-";
   const shapes = k ? transposeChord(k, n, flatsFor(k, n)) : "";
-  $("keyLabel").textContent = "Key: " + sounding + (capo && k ? " (play " + shapes + ")" : "");
-  $("capoLabel").textContent = "Capo " + capo;
+  $("keyLabel").textContent = sounding;
+  $("capoLabel").textContent = capo;
+  $("capoNote").textContent = capo && k ? "play " + shapes : "";
   $("modeBtn").textContent = chordsMode ? "Full song" : "Chords only";
 }
 

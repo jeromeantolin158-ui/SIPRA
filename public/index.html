@@ -122,31 +122,44 @@
   <div class="toolbar">
     <div class="wrap toolbar-in">
       <button class="pill pill-ghost" data-go="songs">&larr; Back</button>
-      <div class="group">
-        <button class="pill pill-ghost pill-sq" onclick="shift(-1)" aria-label="Transpose down">-1</button>
-        <span id="keyLabel" class="key-label"></span>
-        <button class="pill pill-ghost pill-sq" onclick="shift(1)" aria-label="Transpose up">+1</button>
+
+      <div class="tgroup" role="group" aria-label="Key">
+        <span class="tlabel">Key</span>
+        <button class="pill pill-flat pill-sq" onclick="shift(-1)" aria-label="Transpose down">-1</button>
+        <span id="keyLabel" class="tval"></span>
+        <button class="pill pill-flat pill-sq" onclick="shift(1)" aria-label="Transpose up">+1</button>
       </div>
-      <div class="group">
-        <button class="pill pill-ghost pill-sq" onclick="changeCapo(-1)" aria-label="Capo down">-</button>
-        <span id="capoLabel" class="key-label">Capo 0</span>
-        <button class="pill pill-ghost pill-sq" onclick="changeCapo(1)" aria-label="Capo up">+</button>
+
+      <div class="tgroup" role="group" aria-label="Capo">
+        <span class="tlabel">Capo</span>
+        <button class="pill pill-flat pill-sq" onclick="changeCapo(-1)" aria-label="Capo down">-</button>
+        <span id="capoLabel" class="tval">0</span>
+        <button class="pill pill-flat pill-sq" onclick="changeCapo(1)" aria-label="Capo up">+</button>
+        <span id="capoNote" class="tnote"></span>
       </div>
-      <div class="group">
-        <button class="pill pill-ghost pill-sq" onclick="changeFs(-2)" aria-label="Smaller text">A-</button>
-        <button class="pill pill-ghost pill-sq" onclick="changeFs(2)" aria-label="Bigger text">A+</button>
+
+      <div class="tgroup" role="group" aria-label="Text size">
+        <span class="tlabel">Text</span>
+        <button class="pill pill-flat pill-sq" onclick="changeFs(-2)" aria-label="Smaller text">A-</button>
+        <button class="pill pill-flat pill-sq" onclick="changeFs(2)" aria-label="Bigger text">A+</button>
       </div>
+
       <button class="pill pill-ghost" id="modeBtn" onclick="toggleMode()">Chords only</button>
-      <div class="group">
-        <button class="pill pill-ghost" id="scrollBtn" onclick="toggleScroll()">Start scroll</button>
+
+      <div class="tgroup tgroup-end" role="group" aria-label="Auto scroll">
+        <button class="pill pill-flat" id="scrollBtn" onclick="toggleScroll()">Start scroll</button>
         <input type="range" min="10" max="150" value="30" oninput="setSpeed(this.value)" aria-label="Scroll speed">
       </div>
-      <button class="pill pill-ghost" onclick="exportPptx()">PPTX</button>
-      <button class="pill pill-ghost" onclick="window.print()">Print / PDF</button>
     </div>
   </div>
   <div class="wrap">
-    <h1 class="display song-title" id="songTitle"></h1>
+    <div class="song-head">
+      <h1 class="display song-title" id="songTitle"></h1>
+      <div class="song-actions">
+        <button class="pill pill-ghost" onclick="exportPptx()">PPTX</button>
+        <button class="pill pill-ghost" onclick="window.print()">Print / PDF</button>
+      </div>
+    </div>
     <div id="out"></div>
   </div>
 </section>
@@ -269,7 +282,7 @@
     <p class="eyebrow">Manage</p>
     <h1 class="display page-title">Add multiple songs</h1>
     <p class="muted">One song after another. A title line, then one line per section, like the example below.</p>
-    <textarea class="field mono" id="importBox" placeholder="Heart of Worship&#10;Intro: D A G A&#10;Verse: D A G A&#10;Refrain: Em G A 4x&#10;&#10;Another Song&#10;Intro: F C D F&#10;Chorus: C G Am F 2x"></textarea>
+    <textarea class="field mono" id="importBox" aria-label="Songs to import" placeholder="Heart of Worship&#10;Intro: D A G A&#10;Verse: D A G A&#10;Refrain: Em G A 4x&#10;&#10;Another Song&#10;Intro: F C D F&#10;Chorus: C G Am F 2x"></textarea>
     <label class="check"><input type="checkbox" id="replaceBox"> Replace songs with the same title (overwrites their chords and lyrics)</label>
     <div class="row-actions">
       <button class="pill pill-amber" onclick="importSongs()">Import</button>
