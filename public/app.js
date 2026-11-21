@@ -47,6 +47,7 @@ const saveUndo = () => {
 let current = null;
 let steps = 0;
 let capo = 0;
+let currentSetId = null;                           // set when the song was opened from a setlist
 let fs = Number(load("chordify_fs", 0)) || 0;      // song text size in px (0 = default)
 let chordsMode = false;
 let editingId = null;
@@ -356,6 +357,9 @@ function render() {
   $("keyLabel").textContent = sounding;
   $("capoLabel").textContent = capo;
   $("capoNote").textContent = capo && k ? "play " + shapes : "";
+  const note = (current.note || "").trim();
+  $("songNote").classList.toggle("hidden", !note);
+  $("songNoteText").textContent = note;
   $("modeBtn").textContent = chordsMode ? "Full song" : "Chords only";
 }
 
@@ -526,8 +530,9 @@ function renderSongs() {
   found.forEach((s, i) => grid.appendChild(songCard(s, i)));
 }
 
-function openSong(s) {
+function openSong(s, setId) {
   current = s;
+  currentSetId = setId && getSetlist(setId) ? setId : null;
   steps = 0;
   capo = 0;
   chordsMode = false;
@@ -535,6 +540,38 @@ function openSong(s) {
   saveRecent();
   page("songView");
   render();
+  updateSetNav();
+}
+
+/* previous / next song when the song was opened from a setlist */
+function updateSetNav() {
+  const l = currentSetId ? getSetlist(currentSetId) : null;
+  const i = l ? l.songs.indexOf(current.id) : -1;
+  const inSet = !!l && i !== -1;
+  if (!inSet) currentSetId = null;
+
+  $("backBtn").dataset.go = inSet ? "setlist/" + l.id : "songs";
+  ["setNav", "setNavEnd"].forEach(id => {
+    const box = $(id);
+    box.classList.toggle("hidden", !inSet);
+    if (!inSet) return;
+    box.querySelector(".set-nav-title").innerHTML = "";
+    const b = document.createElement("b");
+    b.textContent = l.name;
+    box.querySelector(".set-nav-title").append(b, ` · song ${i + 1} of ${l.songs.length}`);
+  });
+  [["prevBtn", "prevBtn2"], ["nextBtn", "nextBtn2"]].forEach(([a, b], n) => {
+    const off = !inSet || (n === 0 ? i <= 0 : i >= l.songs.length - 1);
+    $(a).disabled = off;
+    $(b).disabled = off;
+  });
+}
+
+function stepSetlist(d) {
+  const l = currentSetId && getSetlist(currentSetId);
+  if (!l) return;
+  const next = l.songs[l.songs.indexOf(current.id) + d];
+  if (next) go("song/" + next + "/" + l.id);
 }
 
 /* ---------- SETLISTS (many; each has a name, a date and ordered songs) ---------- */
@@ -600,7 +637,7 @@ function renderSetlistView(id) {
     li.appendChild(el("span", "idx", String(i + 1).padStart(2, "0")));
     li.appendChild(el("span", "grow", s.title));
     if (s.key) li.appendChild(el("span", "key", s.key));
-    li.onclick = () => go("song/" + sid);
+    li.onclick = () => go("song/" + sid + "/" + id);
     ul.appendChild(li);
   });
 }
@@ -765,6 +802,7 @@ function openEditor(id) {
   $("editHeading").textContent = s ? "Edit song" : "Add song";
   $("fTitle").value = s ? s.title : "";
   $("fKey").value = s ? s.key : "";
+  $("fNote").value = s ? (s.note || "") : "";
   $("fBody").value = s ? s.body : "";
   $("delBtn").classList.toggle("hidden", !s);
   page("editView");
@@ -779,6 +817,7 @@ function saveSong() {
 
   s.title = title;
   s.key = normKey($("fKey").value);
+  s.note = $("fNote").value.trim();
   s.body = $("fBody").value;
 
   persist();
@@ -1086,7 +1125,7 @@ const SONG_GROUP = ["songs", "song", "setlists", "setlist", "newsetlist", "edits
 const VIEWS_ROUTES = [...SONG_GROUP, "manage", "edit", "import", "delete"];
 
 function route() {
-  const [a, b] = location.hash.replace(/^#\/?/, "").split("/");
+  const [a, b, c] = location.hash.replace(/^#\/?/, "").split("/");
   stopScroll();
   setNav(a);
 
@@ -1099,7 +1138,7 @@ function route() {
     case "song": {
       const s = songs.find(x => x.id === b);
       if (!s) { go("songs"); return; }
-      openSong(s);
+      openSong(s, c);
       break;
     }
     case "setlists": page("setlistsView"); renderSetlists(); break;
@@ -1189,6 +1228,19 @@ function demoMove(n) { demoShift = ((demoShift + n) % 12 + 12) % 12; renderDemo(
 document.getElementById("demoUp").addEventListener("click", () => demoMove(1));
 document.getElementById("demoDown").addEventListener("click", () => demoMove(-1));
 renderDemo();
+
+/* ---------- OFFLINE (service worker) ---------- */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.ready.then(() => {
+      if (!load("chordify_offline_note", false)) {
+        save("chordify_offline_note", true);
+        toast("Saved for offline use");
+      }
+    }).catch(() => {});
+  });
+}
 
 /* ---------- START ---------- */
 syncThemeBtn();

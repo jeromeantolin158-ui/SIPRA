@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CHORDIFY</title>
 <script>try{var t=localStorage.getItem("sipra_theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=JetBrains+Mono:wght@400;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6c4818">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -121,7 +122,7 @@
 <section id="songView" class="page hidden">
   <div class="toolbar">
     <div class="wrap toolbar-in">
-      <button class="pill pill-ghost" data-go="songs">&larr; Back</button>
+      <button class="pill pill-ghost" id="backBtn" data-go="songs">&larr; Back</button>
 
       <div class="tgroup" role="group" aria-label="Key">
         <span class="tlabel">Key</span>
@@ -151,6 +152,11 @@
         <input type="range" min="10" max="150" value="30" oninput="setSpeed(this.value)" aria-label="Scroll speed">
       </div>
     </div>
+    <div class="wrap set-nav hidden" id="setNav">
+      <button class="pill pill-ghost" onclick="stepSetlist(-1)" id="prevBtn">&larr; Prev</button>
+      <span class="set-nav-title"></span>
+      <button class="pill pill-amber" onclick="stepSetlist(1)" id="nextBtn">Next &rarr;</button>
+    </div>
   </div>
   <div class="wrap">
     <div class="song-head">
@@ -160,7 +166,14 @@
         <button class="pill pill-ghost" onclick="window.print()">Print / PDF</button>
       </div>
     </div>
+    <div class="song-note hidden" id="songNote"><span class="tlabel">Note</span><p id="songNoteText"></p></div>
     <div id="out"></div>
+    <div class="set-nav hidden" id="setNavEnd">
+      <button class="pill pill-ghost" onclick="stepSetlist(-1)" id="prevBtn2">&larr; Prev</button>
+      <span class="set-nav-title"></span>
+      <button class="pill pill-amber" onclick="stepSetlist(1)" id="nextBtn2">Next &rarr;</button>
+    </div>
+    <div class="song-spacer"></div>
   </div>
 </section>
 
@@ -265,6 +278,8 @@
     <input class="field" type="text" id="fTitle" placeholder="Title">
     <label class="field-label" for="fKey">Key</label>
     <input class="field" type="text" id="fKey" placeholder="Key (e.g. G)">
+    <label class="field-label" for="fNote">Note (optional)</label>
+    <textarea class="field short" id="fNote" rows="3" maxlength="400" placeholder="e.g. Start slow. Drums join at the chorus."></textarea>
     <label class="field-label" for="fBody">Chords and lyrics</label>
     <textarea class="field mono" id="fBody" placeholder="[G]Amazing [C]grace, how [G]sweet the [D]sound"></textarea>
     <div class="row-actions">
@@ -324,7 +339,7 @@
 </dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="pptxgen.bundle.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
